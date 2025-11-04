@@ -1,6 +1,14 @@
 from rest_framework import viewsets, permissions
-from .models import Account, Contact, Lead, Deal, Campaign, Task
-from .serializers import AccountSerializer, ContactSerializer, LeadSerializer, DealSerializer, CampaignSerializer, TaskSerializer
+from .models import User, Account, Contact, Lead, Deal, Campaign, Task
+from .serializers import (
+    UserSerializer,
+    AccountSerializer,
+    ContactSerializer,
+    LeadSerializer,
+    DealSerializer,
+    CampaignSerializer,
+    TaskSerializer,
+)
 from .permissions import IsAdminOrOwner
 
 class AccountViewSet(viewsets.ModelViewSet):
@@ -31,4 +39,11 @@ class CampaignViewSet(viewsets.ModelViewSet):
 class TaskViewSet(viewsets.ModelViewSet):
     queryset = Task.objects.all()
     serializer_class = TaskSerializer
+    permission_classes = [permissions.IsAuthenticated, IsAdminOrOwner]
+
+
+class UserViewSet(viewsets.ModelViewSet):
+    """Expose users via API at /api/users/"""
+    queryset = User.objects.all()
+    serializer_class = UserSerializer
     permission_classes = [permissions.IsAuthenticated, IsAdminOrOwner]

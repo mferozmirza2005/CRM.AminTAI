@@ -1,161 +1,218 @@
 {% extends "base.html" %}
 {% load static %}
+
 {% block title %}Settings - CRM{% endblock %}
 
 {% block content %}
 <div class="d-flex justify-content-between align-items-center mb-4">
-    <h2 class="fw-bold text-primary">Settings</h2>
-    <button class="btn btn-outline-primary btn-sm" id="saveSettingsBtn">
-        <i class="bi bi-save"></i> Save Changes
-    </button>
+  <h2 class="fw-bold text-primary">Settings</h2>
+  <button class="btn btn-outline-primary btn-sm" id="saveSettingsBtn">
+    <i class="bi bi-save"></i> Save Changes
+  </button>
 </div>
 
 <div class="card shadow-sm border-0">
-    <div class="card-body">
-        <ul class="nav nav-tabs" id="settingsTabs" role="tablist">
-            <li class="nav-item" role="presentation">
-                <button class="nav-link active" id="general-tab" data-bs-toggle="tab" data-bs-target="#general"
-                    type="button" role="tab">
-                    <i class="bi bi-gear"></i> General
-                </button>
-            </li>
-            <li class="nav-item" role="presentation">
-                <button class="nav-link" id="profile-tab" data-bs-toggle="tab" data-bs-target="#profile" type="button"
-                    role="tab">
-                    <i class="bi bi-person-circle"></i> Profile
-                </button>
-            </li>
-            <li class="nav-item" role="presentation">
-                <button class="nav-link" id="appearance-tab" data-bs-toggle="tab" data-bs-target="#appearance"
-                    type="button" role="tab">
-                    <i class="bi bi-palette"></i> Appearance
-                </button>
-            </li>
-        </ul>
+  <div class="card-body">
+    <ul class="nav nav-tabs" id="settingsTabs" role="tablist">
+      <li class="nav-item" role="presentation">
+        <button
+          class="nav-link active"
+          id="general-tab"
+          data-bs-toggle="tab"
+          data-bs-target="#general"
+          type="button"
+          role="tab"
+        >
+          <i class="bi bi-gear"></i> General
+        </button>
+      </li>
+      <li class="nav-item" role="presentation">
+        <button
+          class="nav-link"
+          id="profile-tab"
+          data-bs-toggle="tab"
+          data-bs-target="#profile"
+          type="button"
+          role="tab"
+        >
+          <i class="bi bi-person-circle"></i> Profile
+        </button>
+      </li>
+      <li class="nav-item" role="presentation">
+        <button
+          class="nav-link"
+          id="appearance-tab"
+          data-bs-toggle="tab"
+          data-bs-target="#appearance"
+          type="button"
+          role="tab"
+        >
+          <i class="bi bi-palette"></i> Appearance
+        </button>
+      </li>
+    </ul>
 
-        <div class="tab-content mt-4">
-            <!-- General Settings -->
-            <div class="tab-pane fade show active" id="general" role="tabpanel">
-                <form id="generalForm" class="row g-3">
-                    <div class="col-md-6">
-                        <label class="form-label fw-semibold">Organization Name</label>
-                        <input type="text" class="form-control" id="orgName" placeholder="e.g. AminTAI CRM">
-                    </div>
-                    <div class="col-md-6">
-                        <label class="form-label fw-semibold">Support Email</label>
-                        <input type="email" class="form-control" id="supportEmail" placeholder="support@example.com">
-                    </div>
-                    <div class="col-md-6">
-                        <label class="form-label fw-semibold">Timezone</label>
-                        <select class="form-select" id="timezone">
-                            <option value="UTC">UTC</option>
-                            <option value="Asia/Karachi">Asia/Karachi</option>
-                            <option value="America/New_York">America/New_York</option>
-                            <option value="Europe/London">Europe/London</option>
-                        </select>
-                    </div>
-                    <div class="col-md-6">
-                        <label class="form-label fw-semibold">Default Language</label>
-                        <select class="form-select" id="language">
-                            <option value="en">English</option>
-                            <option value="es">Spanish</option>
-                            <option value="fr">French</option>
-                        </select>
-                    </div>
-                </form>
-            </div>
+    <div class="tab-content mt-4">
+      <!-- General Settings -->
+      <div class="tab-pane fade show active" id="general" role="tabpanel">
+        <form id="generalForm" class="row g-3">
+          <div class="col-md-6">
+            <label class="form-label fw-semibold">Organization Name</label>
+            <input
+              type="text"
+              class="form-control"
+              id="orgName"
+              placeholder="e.g. AminTAI CRM"
+            />
+          </div>
+          <div class="col-md-6">
+            <label class="form-label fw-semibold">Support Email</label>
+            <input
+              type="email"
+              class="form-control"
+              id="supportEmail"
+              placeholder="support@example.com"
+            />
+          </div>
+          <div class="col-md-6">
+            <label class="form-label fw-semibold">Timezone</label>
+            <select class="form-select" id="timezone">
+              <option value="UTC">UTC</option>
+              <option value="Asia/Karachi">Asia/Karachi</option>
+              <option value="America/New_York">America/New_York</option>
+              <option value="Europe/London">Europe/London</option>
+            </select>
+          </div>
+          <div class="col-md-6">
+            <label class="form-label fw-semibold">Default Language</label>
+            <select class="form-select" id="language">
+              <option value="en">English</option>
+              <option value="es">Spanish</option>
+              <option value="fr">French</option>
+            </select>
+          </div>
+        </form>
+      </div>
 
-            <!-- Profile Settings -->
-            <div class="tab-pane fade" id="profile" role="tabpanel">
-                <form id="profileForm" class="row g-3">
-                    <div class="col-md-6">
-                        <label class="form-label fw-semibold">Full Name</label>
-                        <input type="text" class="form-control" id="profileName" placeholder="John Doe">
-                    </div>
-                    <div class="col-md-6">
-                        <label class="form-label fw-semibold">Email</label>
-                        <input type="email" class="form-control" id="profileEmail" disabled>
-                    </div>
-                    <div class="col-md-6">
-                        <label class="form-label fw-semibold">Change Password</label>
-                        <input type="password" class="form-control" id="newPassword" placeholder="********">
-                    </div>
-                    <div class="col-md-6">
-                        <label class="form-label fw-semibold">Confirm Password</label>
-                        <input type="password" class="form-control" id="confirmPassword" placeholder="********">
-                    </div>
-                </form>
-            </div>
+      <!-- Profile Settings -->
+      <div class="tab-pane fade" id="profile" role="tabpanel">
+        <form id="profileForm" class="row g-3">
+          <div class="col-md-6">
+            <label class="form-label fw-semibold">Full Name</label>
+            <input
+              type="text"
+              class="form-control"
+              id="profileName"
+              placeholder="John Doe"
+            />
+          </div>
+          <div class="col-md-6">
+            <label class="form-label fw-semibold">Email</label>
+            <input
+              type="email"
+              class="form-control"
+              id="profileEmail"
+              disabled
+            />
+          </div>
+          <div class="col-md-6">
+            <label class="form-label fw-semibold">Change Password</label>
+            <input
+              type="password"
+              class="form-control"
+              id="newPassword"
+              placeholder="********"
+            />
+          </div>
+          <div class="col-md-6">
+            <label class="form-label fw-semibold">Confirm Password</label>
+            <input
+              type="password"
+              class="form-control"
+              id="confirmPassword"
+              placeholder="********"
+            />
+          </div>
+        </form>
+      </div>
 
-            <!-- Appearance Settings -->
-            <div class="tab-pane fade" id="appearance" role="tabpanel">
-                <form id="appearanceForm" class="row g-3">
-                    <div class="col-md-6">
-                        <label class="form-label fw-semibold">Theme Mode</label>
-                        <select class="form-select" id="themeMode">
-                            <option value="light">Light</option>
-                            <option value="dark">Dark</option>
-                            <option value="auto">Auto</option>
-                        </select>
-                    </div>
-                    <div class="col-md-6">
-                        <label class="form-label fw-semibold">Accent Color</label>
-                        <input type="color" class="form-control form-control-color" id="accentColor" value="#0d6efd">
-                    </div>
-                </form>
-            </div>
-        </div>
+      <!-- Appearance Settings -->
+      <div class="tab-pane fade" id="appearance" role="tabpanel">
+        <form id="appearanceForm" class="row g-3">
+          <div class="col-md-6">
+            <label class="form-label fw-semibold">Theme Mode</label>
+            <select class="form-select" id="themeMode">
+              <option value="light">Light</option>
+              <option value="dark">Dark</option>
+              <option value="auto">Auto</option>
+            </select>
+          </div>
+          <div class="col-md-6">
+            <label class="form-label fw-semibold">Accent Color</label>
+            <input
+              type="color"
+              class="form-control form-control-color"
+              id="accentColor"
+              value="#0d6efd"
+            />
+          </div>
+        </form>
+      </div>
     </div>
+  </div>
 </div>
 {% endblock %}
 
 {% block scripts %}
 <script>
-    async function loadSettings() {
-        const token = localStorage.getItem("access");
-        const res = await fetch("/api/settings/", {
-            headers: { "Authorization": "Bearer " + token }
-        });
-
-        if (res.ok) {
-            const data = await res.json();
-            document.getElementById("orgName").value = data.organization_name || "";
-            document.getElementById("supportEmail").value = data.support_email || "";
-            document.getElementById("timezone").value = data.timezone || "UTC";
-            document.getElementById("language").value = data.language || "en";
-            document.getElementById("themeMode").value = data.theme_mode || "light";
-            document.getElementById("accentColor").value = data.accent_color || "#0d6efd";
-        }
-    }
-
-    document.getElementById("saveSettingsBtn").addEventListener("click", async () => {
-        const token = localStorage.getItem("access");
-        const body = {
-            organization_name: document.getElementById("orgName").value,
-            support_email: document.getElementById("supportEmail").value,
-            timezone: document.getElementById("timezone").value,
-            language: document.getElementById("language").value,
-            theme_mode: document.getElementById("themeMode").value,
-            accent_color: document.getElementById("accentColor").value,
-        };
-
-        const res = await fetch("/api/settings/", {
-            method: "POST",
-            headers: {
-                "Authorization": "Bearer " + token,
-                "Content-Type": "application/json"
-            },
-            body: JSON.stringify(body)
-        });
-
-        if (res.ok) {
-            alert("✅ Settings saved successfully! Reloading to apply changes...");
-            location.reload();
-        } else {
-            alert("❌ Failed to save settings.");
-        }
+  async function loadSettings() {
+    const token = localStorage.getItem("access");
+    const res = await fetch("/api/settings/", {
+      headers: { Authorization: "Bearer " + token },
     });
 
-    loadSettings();
+    if (res.ok) {
+      const data = await res.json();
+      document.getElementById("orgName").value = data.organization_name || "";
+      document.getElementById("supportEmail").value = data.support_email || "";
+      document.getElementById("timezone").value = data.timezone || "UTC";
+      document.getElementById("language").value = data.language || "en";
+      document.getElementById("themeMode").value = data.theme_mode || "light";
+      document.getElementById("accentColor").value =
+        data.accent_color || "#0d6efd";
+    }
+  }
+
+  document
+    .getElementById("saveSettingsBtn")
+    .addEventListener("click", async () => {
+      const token = localStorage.getItem("access");
+      const body = {
+        organization_name: document.getElementById("orgName").value,
+        support_email: document.getElementById("supportEmail").value,
+        timezone: document.getElementById("timezone").value,
+        language: document.getElementById("language").value,
+        theme_mode: document.getElementById("themeMode").value,
+        accent_color: document.getElementById("accentColor").value,
+      };
+
+      const res = await fetch("/api/settings/", {
+        method: "POST",
+        headers: {
+          Authorization: "Bearer " + token,
+          "Content-Type": "application/json",
+        },
+        body: JSON.stringify(body),
+      });
+
+      if (res.ok) {
+        alert("✅ Settings saved successfully! Reloading to apply changes...");
+        location.reload();
+      } else {
+        alert("❌ Failed to save settings.");
+      }
+    });
+
+  loadSettings();
 </script>
 {% endblock %}

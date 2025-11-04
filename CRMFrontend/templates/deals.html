@@ -1,24 +1,368 @@
 {% extends "base.html" %}
+
 {% block title %}Deals - CRM{% endblock %}
+
 {% block content %}
-<h2>Deals</h2>
-<table class="table table-striped mt-3" id="dataTable">
-    <thead><tr><th>Name</th><th>Region</th><th>Created</th></tr></thead>
+<div class="d-flex justify-content-between align-items-center mb-3">
+  <h2 class="mb-0">Deals</h2>
+  <button class="btn btn-outline-primary" id="createBtn">
+    <i class="bi bi-plus-lg"></i> Create
+  </button>
+</div>
+
+<div class="table-responsive">
+  <table class="table table-striped" id="dataTable">
+    <thead>
+      <tr>
+        <th>Title</th>
+        <th>Amount</th>
+        <th>Stage</th>
+        <th>Account</th>
+        <th>Created</th>
+        <th class="text-end">Actions</th>
+      </tr>
+    </thead>
     <tbody></tbody>
-</table>
+  </table>
+</div>
+
+<!-- Modal -->
+<div class="modal fade" id="itemModal" tabindex="-1" aria-hidden="true">
+  <div class="modal-dialog modal-dialog-centered">
+    <div class="modal-content">
+      <div class="modal-header">
+        <h5 class="modal-title" id="modalTitle">Create Deal</h5>
+        <button
+          type="button"
+          class="btn-close"
+          data-bs-dismiss="modal"
+          aria-label="Close"
+        ></button>
+      </div>
+      <div class="modal-body">
+        <form id="itemForm">
+          <input type="hidden" id="itemId" />
+          <div class="mb-3">
+            <label class="form-label">Title</label>
+            <input type="text" id="title" class="form-control" required />
+          </div>
+          <div class="row">
+            <div class="mb-3 col-6">
+              <label class="form-label">Amount</label>
+              <input
+                type="number"
+                id="amount"
+                class="form-control"
+                step="0.01"
+                min="0"
+              />
+            </div>
+            <div class="mb-3 col-6">
+              <label class="form-label">Stage</label>
+              <select id="stage" class="form-select">
+                <option value="PROSPECT">Prospect</option>
+                <option value="QUALIFICATION">Qualification</option>
+                <option value="PROPOSAL">Proposal</option>
+                <option value="NEGOTIATION">Negotiation</option>
+                <option value="WON">Won</option>
+                <option value="LOST">Lost</option>
+              </select>
+            </div>
+          </div>
+          <div class="mb-3">
+            <label class="form-label">Account</label>
+            <select id="account" class="form-select">
+              <option value="">— Select account —</option>
+            </select>
+          </div>
+          <div class="row">
+            <div class="mb-3 col-6">
+              <label class="form-label">Lead</label>
+              <select id="lead" class="form-select">
+                <option value="">— None —</option>
+              </select>
+            </div>
+            <div class="mb-3 col-6">
+              <label class="form-label">Contact</label>
+              <select id="contact" class="form-select">
+                <option value="">— None —</option>
+              </select>
+            </div>
+          </div>
+          <div class="row">
+            <div class="mb-3 col-6">
+              <label class="form-label">Owner</label>
+              <select id="owner" class="form-select">
+                <option value="">— None —</option>
+              </select>
+            </div>
+            <div class="mb-3 col-6">
+              <label class="form-label">Campaign</label>
+              <select id="campaign" class="form-select">
+                <option value="">— None —</option>
+              </select>
+            </div>
+          </div>
+          <div class="mb-3">
+            <label class="form-label">Close date</label>
+            <input type="date" id="close_date" class="form-control" />
+          </div>
+        </form>
+      </div>
+      <div class="modal-footer">
+        <button type="button" class="btn btn-secondary" data-bs-dismiss="modal">
+          Close
+        </button>
+        <button type="button" class="btn btn-primary" id="saveBtn">Save</button>
+      </div>
+    </div>
+  </div>
+</div>
 {% endblock %}
+
 {% block scripts %}
 <script>
-async function loadData() {
-    const res = await fetch("/api/deals/", {
-        headers: {"Authorization": "Bearer " + localStorage.getItem("access")}
+  (function () {
+    const base = "/api/deals/";
+    const token = () => localStorage.getItem("access");
+    const modalEl = document.getElementById("itemModal");
+    const modal = new bootstrap.Modal(modalEl);
+
+    async function load() {
+      try {
+        const [rDeals, rUsers, rAccounts, rLeads, rContacts, rCampaigns] =
+          await Promise.all([
+            fetch(base, { headers: { Authorization: "Bearer " + token() } }),
+            fetch("/api/users/", {
+              headers: { Authorization: "Bearer " + token() },
+            }),
+            fetch("/api/accounts/", {
+              headers: { Authorization: "Bearer " + token() },
+            }),
+            fetch("/api/leads/", {
+              headers: { Authorization: "Bearer " + token() },
+            }),
+            fetch("/api/contacts/", {
+              headers: { Authorization: "Bearer " + token() },
+            }),
+            fetch("/api/campaigns/", {
+              headers: { Authorization: "Bearer " + token() },
+            }),
+          ]);
+        if (!rDeals.ok)
+          return console.error("Failed to load deals", rDeals.status);
+
+        if (rAccounts.ok) {
+          const accs = await rAccounts.json();
+          const acctSel = document.getElementById("account");
+          accs.forEach((a) => acctSel.appendChild(new Option(a.name, a.id)));
+        }
+        if (rLeads.ok) {
+          const leads = await rLeads.json();
+          const leadSel = document.getElementById("lead");
+          leads.forEach((l) => leadSel.appendChild(new Option(l.title, l.id)));
+        }
+        if (rContacts.ok) {
+          const contacts = await rContacts.json();
+          const contactSel = document.getElementById("contact");
+          contacts.forEach((c) =>
+            contactSel.appendChild(
+              new Option(
+                (c.first_name || "") + (c.last_name ? " " + c.last_name : ""),
+                c.id
+              )
+            )
+          );
+        }
+        if (rUsers.ok) {
+          const users = await rUsers.json();
+          const ownerSel = document.getElementById("owner");
+          users.forEach((u) =>
+            ownerSel.appendChild(
+              new Option(
+                (
+                  (u.first_name || "") + (u.last_name ? " " + u.last_name : "")
+                ).trim() +
+                  " <" +
+                  u.email +
+                  ">",
+                u.id
+              )
+            )
+          );
+        }
+        if (rCampaigns.ok) {
+          const camps = await rCampaigns.json();
+          const campSel = document.getElementById("campaign");
+          camps.forEach((c) => campSel.appendChild(new Option(c.name, c.id)));
+        }
+
+        const data = await rDeals.json();
+        const tbody = document.querySelector("#dataTable tbody");
+        tbody.innerHTML = data
+          .map(
+            (i) => `
+                    <tr data-id="${i.id}">
+                        <td>${i.title}</td>
+                        <td>${
+                          i.amount != null ? Number(i.amount).toFixed(2) : "-"
+                        }</td>
+                        <td>${i.stage || "-"}</td>
+                        <td>${i.account ? i.account.name : "-"}</td>
+                        <td>${new Date(i.created_at).toLocaleDateString()}</td>
+                        <td class="text-end">
+                            <div class="btn-group">
+                                <button class="btn btn-sm btn-outline-secondary view-btn">View</button>
+                                <button class="btn btn-sm btn-outline-primary edit-btn">Edit</button>
+                                <button class="btn btn-sm btn-outline-danger delete-btn">Delete</button>
+                            </div>
+                        </td>
+                    </tr>
+                `
+          )
+          .join("");
+
+        document
+          .querySelectorAll(".view-btn")
+          .forEach((b) => b.addEventListener("click", onView));
+        document
+          .querySelectorAll(".edit-btn")
+          .forEach((b) => b.addEventListener("click", onEdit));
+        document
+          .querySelectorAll(".delete-btn")
+          .forEach((b) => b.addEventListener("click", onDelete));
+      } catch (err) {
+        console.error("Error loading deals", err);
+      }
+    }
+
+    function openCreate() {
+      document.getElementById("modalTitle").textContent = "Create Deal";
+      document.getElementById("itemForm").reset();
+      document.getElementById("itemId").value = "";
+      modal.show();
+    }
+
+    async function onView(e) {
+      const id = e.target.closest("tr").dataset.id;
+      const res = await fetch(base + id + "/", {
+        headers: { Authorization: "Bearer " + token() },
+      });
+      if (!res.ok) return alert("Failed");
+      const it = await res.json();
+      document.getElementById("modalTitle").textContent = "View Deal";
+      document.getElementById("title").value = it.title || "";
+      document.getElementById("amount").value = it.amount || "";
+      document.getElementById("stage").value = it.stage || "";
+      document.getElementById("account").value = it.account
+        ? it.account.id
+        : "";
+      document.getElementById("lead").value = it.lead ? it.lead.id : "";
+      document.getElementById("contact").value = it.contact
+        ? it.contact.id
+        : "";
+      document.getElementById("owner").value = it.owner ? it.owner.id : "";
+      document.getElementById("campaign").value = it.campaign
+        ? it.campaign.id
+        : "";
+      document.getElementById("close_date").value = it.close_date || "";
+      Array.from(
+        document.querySelectorAll("#itemForm input, #itemForm select")
+      ).forEach((i) => (i.disabled = true));
+      document.getElementById("saveBtn").style.display = "none";
+      modal.show();
+    }
+
+    async function onEdit(e) {
+      const id = e.target.closest("tr").dataset.id;
+      const res = await fetch(base + id + "/", {
+        headers: { Authorization: "Bearer " + token() },
+      });
+      if (!res.ok) return alert("Failed");
+      const it = await res.json();
+      document.getElementById("modalTitle").textContent = "Edit Deal";
+      document.getElementById("itemId").value = it.id;
+      document.getElementById("title").value = it.title || "";
+      document.getElementById("amount").value = it.amount || "";
+      document.getElementById("stage").value = it.stage || "";
+      document.getElementById("account").value = it.account
+        ? it.account.id
+        : "";
+      document.getElementById("lead").value = it.lead ? it.lead.id : "";
+      document.getElementById("contact").value = it.contact
+        ? it.contact.id
+        : "";
+      document.getElementById("owner").value = it.owner ? it.owner.id : "";
+      document.getElementById("campaign").value = it.campaign
+        ? it.campaign.id
+        : "";
+      document.getElementById("close_date").value = it.close_date || "";
+      Array.from(
+        document.querySelectorAll("#itemForm input, #itemForm select")
+      ).forEach((i) => (i.disabled = false));
+      document.getElementById("saveBtn").style.display = "";
+      modal.show();
+    }
+
+    async function onDelete(e) {
+      if (!confirm("Delete this deal?")) return;
+      const id = e.target.closest("tr").dataset.id;
+      const res = await fetch(base + id + "/", {
+        method: "DELETE",
+        headers: { Authorization: "Bearer " + token() },
+      });
+      if (res.ok || res.status === 204) e.target.closest("tr").remove();
+      else alert("Delete failed");
+    }
+
+    async function save() {
+      const id = document.getElementById("itemId").value;
+      const payload = {
+        title: document.getElementById("title").value,
+        amount: document.getElementById("amount").value || 0,
+        stage: document.getElementById("stage").value,
+        account: document.getElementById("account").value || null,
+        lead: document.getElementById("lead").value || null,
+        contact: document.getElementById("contact").value || null,
+        owner: document.getElementById("owner").value || null,
+        campaign: document.getElementById("campaign").value || null,
+        close_date: document.getElementById("close_date").value || null,
+      };
+      const opts = {
+        headers: {
+          "Content-Type": "application/json",
+          Authorization: "Bearer " + token(),
+        },
+        body: JSON.stringify(payload),
+      };
+      let res;
+      if (id) {
+        opts.method = "PUT";
+        res = await fetch(base + id + "/", opts);
+      } else {
+        opts.method = "POST";
+        res = await fetch(base, opts);
+      }
+      if (res.ok) {
+        modal.hide();
+        load();
+      } else {
+        alert("Save failed");
+      }
+    }
+
+    document.getElementById("createBtn").addEventListener("click", openCreate);
+    document.getElementById("saveBtn").addEventListener("click", save);
+    modalEl.addEventListener("hidden.bs.modal", () => {
+      Array.from(
+        document.querySelectorAll(
+          "#itemForm input, #itemForm select, #itemForm textarea"
+        )
+      ).forEach((i) => (i.disabled = false));
+      document.getElementById("saveBtn").style.display = "";
     });
-    const data = await res.json();
-    const tbody = document.querySelector("#dataTable tbody");
-    tbody.innerHTML = data.map(acc =>
-        `<tr><td>${acc.name}</td><td>${acc.region || '-'}</td><td>${new Date(acc.created_at).toLocaleDateString()}</td></tr>`
-    ).join('');
-}
-loadData();
+
+    load();
+  })();
 </script>
 {% endblock %}

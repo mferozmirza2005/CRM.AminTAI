@@ -22,6 +22,7 @@ from CRMFrontend import urls as CRMFrontendUrls
 from rest_framework_simplejwt.views import TokenRefreshView
 
 router = routers.DefaultRouter()
+router.register(r'users', views.UserViewSet, basename='user')
 router.register(r'accounts', views.AccountViewSet, basename='account')
 router.register(r'contacts', views.ContactViewSet, basename='contact')
 router.register(r'leads', views.LeadViewSet, basename='lead')
