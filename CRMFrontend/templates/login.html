@@ -1,0 +1,50 @@
+{% extends "base.html" %}
+{% block title %}Login - CRM{% endblock %}
+{% block content %}
+<div class="col-md-4 offset-md-4 mt-5">
+    <h3 class="text-center mb-4">Sign In</h3>
+    <form id="loginForm">
+        <div class="mb-3">
+            <label>Email</label>
+            <input type="email" class="form-control" id="email" required>
+        </div>
+        <div class="mb-3">
+            <label>Password</label>
+            <input type="password" class="form-control" id="password" required>
+        </div>
+        <button class="btn btn-primary w-100">Login</button>
+        <p class="text-center mt-3">Don’t have an account? <a href="{% url 'signup' %}">Sign up</a></p>
+    </form>
+    <div id="loginMessage" class="text-danger text-center mt-2"></div>
+</div>
+{% endblock %}
+{% block scripts %}
+<script>
+    document.getElementById("loginForm").addEventListener("submit", async (e) => {
+        e.preventDefault();
+
+        const emailField = document.getElementById("email");
+        const passwordField = document.getElementById("password");
+
+        const email = emailField.value.trim();
+        const password = passwordField.value.trim();
+
+        const response = await fetch("/api/auth/login/", {
+            method: "POST",
+            headers: { "Content-Type": "application/json" },
+            body: JSON.stringify({ email, password }),
+        });
+
+        const data = await response.json();
+
+        if (response.ok) {
+            localStorage.setItem("access", data.access);
+            localStorage.setItem("refresh", data.refresh);
+            window.location.href = "/dashboard/";
+        } else {
+            document.getElementById("loginMessage").textContent =
+                data.detail || "Invalid credentials.";
+        }
+    });
+</script>
+{% endblock %}

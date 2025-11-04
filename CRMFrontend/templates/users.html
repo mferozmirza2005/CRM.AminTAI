@@ -1,0 +1,31 @@
+{% extends "base.html" %}
+{% block title %}User Management{% endblock %}
+{% block content %}
+<h2>Manage Users</h2>
+<table class="table table-striped mt-3" id="userTable">
+    <thead>
+        <tr>
+            <th>Username</th>
+            <th>Email</th>
+            <th>Role</th>
+            <th>Status</th>
+        </tr>
+    </thead>
+    <tbody></tbody>
+</table>
+{% endblock %}
+{% block scripts %}
+<script>
+    async function loadUsers() {
+        const res = await fetch("/api/users/", {
+            headers: { "Authorization": "Bearer " + localStorage.getItem("access") }
+        });
+        const data = await res.json();
+        const tbody = document.querySelector("#userTable tbody");
+        tbody.innerHTML = data.map(u =>
+            `<tr><td>${u.username}</td><td>${u.email}</td><td>${u.role}</td><td>${u.is_active ? "✅" : "❌"}</td></tr>`
+        ).join('');
+    }
+    loadUsers();
+</script>
+{% endblock %}

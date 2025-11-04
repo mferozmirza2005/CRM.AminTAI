@@ -1,0 +1,108 @@
+/* Global accent references */
+:root {
+    --crm-accent: #0d6efd;
+    --crm-accent-bg: {{ crm_settings.accent_color|default:"#0d6efd" }};
+}
+
+/* Light & dark adjustments */
+body.bg-dark {
+    background-color: #121212 !important;
+    color: #e0e0e0;
+}
+
+body.bg-dark .card {
+    background-color: #1e1e1e;
+    border: 1px solid #333;
+}
+
+.navbar-dark .navbar-brand {
+    font-weight: bold;
+    letter-spacing: 0.5px;
+}
+
+.crm-sidebar {
+    background-color: var(--crm-accent-bg);
+    transition: all 0.3s ease;
+}
+
+.crm-sidebar .nav-link.active {
+    background-color: var(--crm-accent);
+    color: white !important;
+    border-radius: 8px;
+}
+
+
+
+/* --- GLOBAL --- */
+body.crm-body {
+    background-color: #f4f6f9;
+    font-family: 'Inter', 'Segoe UI', sans-serif;
+}
+
+/* --- SIDEBAR --- */
+.crm-sidebar {
+    min-width: 240px;
+    height: calc(100vh - 56px);
+    position: sticky;
+    top: 56px;
+    transition: all 0.3s ease;
+}
+
+.crm-sidebar.collapsed {
+    width: 70px;
+}
+
+.crm-sidebar.collapsed .nav-link span {
+    display: none;
+}
+
+.crm-sidebar .nav-link {
+    color: #333;
+    font-weight: 500;
+    border-radius: 8px;
+    margin: 4px 8px;
+    padding: 10px 12px;
+    display: flex;
+    align-items: center;
+    gap: 10px;
+}
+
+.crm-sidebar .nav-link i {
+    font-size: 1.1rem;
+}
+
+.crm-sidebar .nav-link:hover {
+    background-color: #eaf1ff;
+    color: #0d6efd;
+}
+
+
+/* --- MAIN --- */
+.crm-main h2 {
+    color: #0d6efd;
+    font-weight: 600;
+}
+
+.table {
+    background: white;
+    border-radius: 8px;
+    overflow: hidden;
+}
+
+.card {
+    border-radius: 10px;
+    box-shadow: 0 2px 8px rgba(0, 0, 0, 0.05);
+}
+
+/* --- RESPONSIVE --- */
+@media (max-width: 992px) {
+    .crm-sidebar {
+        display: none;
+        position: fixed;
+        z-index: 1050;
+    }
+
+    .crm-sidebar.collapsed {
+        display: block;
+    }
+}

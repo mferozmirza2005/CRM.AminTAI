@@ -1,0 +1,61 @@
+{% extends "base.html" %}
+{% block title %}Sign Up - CRM{% endblock %}
+{% block content %}
+<div class="col-md-4 offset-md-4 mt-5">
+    <h3 class="text-center mb-4">Create an Account</h3>
+    <form id="signupForm">
+        <div class="mb-3">
+            <label>Email</label>
+            <input type="email" class="form-control" id="email" required>
+        </div>
+        <div class="mb-3">
+            <label>Password</label>
+            <input type="password" class="form-control" id="password" required>
+        </div>
+        <div class="mb-3">
+            <label>First Name</label>
+            <input type="text" class="form-control" id="first_name">
+        </div>
+        <div class="mb-3">
+            <label>Last Name</label>
+            <input type="text" class="form-control" id="last_name">
+        </div>
+        <button class="btn btn-success w-100">Register</button>
+        <p class="text-center mt-3">Already have an account? <a href="{% url 'login' %}">Login</a></p>
+    </form>
+    <div id="signupMessage" class="text-danger text-center mt-2"></div>
+</div>
+{% endblock %}
+{% block scripts %}
+<script>
+    document.getElementById("signupForm").addEventListener("submit", async (e) => {
+        e.preventDefault();
+
+        const emailField = document.getElementById("email");
+        const passwordField = document.getElementById("password");
+        const firstNameField = document.getElementById("first_name");
+        const lastNameField = document.getElementById("last_name");
+
+        const data = {
+            email: emailField.value.trim(),
+            password: passwordField.value.trim(),
+            first_name: firstNameField.value.trim(),
+            last_name: lastNameField.value.trim(),
+        };
+
+        const response = await fetch("/api/auth/register/", {
+            method: "POST",
+            headers: { "Content-Type": "application/json" },
+            body: JSON.stringify(data),
+        });
+
+        if (response.ok) {
+            window.location.href = "/login/";
+        } else {
+            const res = await response.json();
+            document.getElementById("signupMessage").textContent =
+                res.detail || "Registration failed.";
+        }
+    });
+</script>
+{% endblock %}

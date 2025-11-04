@@ -1,0 +1,24 @@
+{% extends "base.html" %}
+{% block title %}Accounts - CRM{% endblock %}
+{% block content %}
+<h2>Accounts</h2>
+<table class="table table-striped mt-3" id="dataTable">
+    <thead><tr><th>Name</th><th>Region</th><th>Created</th></tr></thead>
+    <tbody></tbody>
+</table>
+{% endblock %}
+{% block scripts %}
+<script>
+async function loadData() {
+    const res = await fetch("/api/accounts/", {
+        headers: {"Authorization": "Bearer " + localStorage.getItem("access")}
+    });
+    const data = await res.json();
+    const tbody = document.querySelector("#dataTable tbody");
+    tbody.innerHTML = data.map(acc =>
+        `<tr><td>${acc.name}</td><td>${acc.region || '-'}</td><td>${new Date(acc.created_at).toLocaleDateString()}</td></tr>`
+    ).join('');
+}
+loadData();
+</script>
+{% endblock %}
