@@ -4,15 +4,34 @@
 {% block title %}Dashboard - MyCRM{% endblock %}
 
 {% block content %}
-<h2 class="mb-4">Dashboard Overview</h2>
+<div class="page-header">
+    <h2 class="mb-0">Dashboard Overview</h2>
+    <div class="text-muted">
+        <i class="bi bi-calendar3 me-2"></i>
+        <span id="currentDate"></span>
+    </div>
+</div>
 
-<div id="dashboardStats" class="row g-4">
-    <div class="col-12 text-center">
-        <div class="spinner-border text-primary" role="status">
-            <span class="visually-hidden">Loading...</span>
+<div id="dashboardStats" class="fade-in">
+    <div class="row g-4 mb-4">
+        <div class="col-12 text-center py-5">
+            <div class="spinner-border text-primary" role="status">
+                <span class="visually-hidden">Loading...</span>
+            </div>
+            <p class="mt-3 text-muted">Loading dashboard data...</p>
         </div>
     </div>
 </div>
+
+<script>
+    // Display current date
+    document.getElementById('currentDate').textContent = new Date().toLocaleDateString('en-US', { 
+        weekday: 'long', 
+        year: 'numeric', 
+        month: 'long', 
+        day: 'numeric' 
+    });
+</script>
 {% endblock %}
 
 {% block scripts %}

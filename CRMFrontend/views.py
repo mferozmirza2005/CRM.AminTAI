@@ -59,14 +59,7 @@ def dashboard_page(request):
     """
     Displays dashboard. JS will fetch user data via /api/dashboard/ using JWT.
     """
-
-    context = {
-        'crm_settings': {
-            'accent_color': '#0d6efd',
-            'theme_mode': 'dark',
-        }
-    }
-    return render(request, "dashboard.html", context)
+    return render(request, "dashboard.html")
 
 
 # -----------------------------

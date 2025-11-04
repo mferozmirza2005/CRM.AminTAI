@@ -3,15 +3,17 @@
 {% block title %}Deals - CRM{% endblock %}
 
 {% block content %}
-<div class="d-flex justify-content-between align-items-center mb-3">
+<div class="page-header">
   <h2 class="mb-0">Deals</h2>
-  <button class="btn btn-outline-primary" id="createBtn">
-    <i class="bi bi-plus-lg"></i> Create
+  <button class="btn btn-primary" id="createBtn">
+    <i class="bi bi-plus-lg me-2"></i>Create Deal
   </button>
 </div>
 
-<div class="table-responsive">
-  <table class="table table-striped" id="dataTable">
+<div class="card">
+  <div class="card-body p-0">
+    <div class="table-responsive">
+      <table class="table table-hover mb-0" id="dataTable">
     <thead>
       <tr>
         <th>Title</th>
@@ -22,8 +24,10 @@
         <th class="text-end">Actions</th>
       </tr>
     </thead>
-    <tbody></tbody>
-  </table>
+    <tbody>    </tbody>
+      </table>
+    </div>
+  </div>
 </div>
 
 <!-- Modal -->
@@ -152,10 +156,12 @@
         if (!rDeals.ok)
           return console.error("Failed to load deals", rDeals.status);
 
+        // Store accounts for lookup when rendering table
+        let accounts = [];
         if (rAccounts.ok) {
-          const accs = await rAccounts.json();
+          accounts = await rAccounts.json();
           const acctSel = document.getElementById("account");
-          accs.forEach((a) => acctSel.appendChild(new Option(a.name, a.id)));
+          accounts.forEach((a) => acctSel.appendChild(new Option(a.name, a.id)));
         }
         if (rLeads.ok) {
           const leads = await rLeads.json();
@@ -200,15 +206,29 @@
         const data = await rDeals.json();
         const tbody = document.querySelector("#dataTable tbody");
         tbody.innerHTML = data
-          .map(
-            (i) => `
+          .map((i) => {
+            // Handle account display - may be object or ID
+            let accountDisplay = "-";
+            if (i.account) {
+              if (typeof i.account === 'object' && i.account.name) {
+                accountDisplay = i.account.name;
+              } else if (typeof i.account === 'number' || typeof i.account === 'string') {
+                const accountObj = accounts.find((a) => a.id === Number(i.account));
+                if (accountObj) accountDisplay = accountObj.name;
+              }
+            } else if (i.account_id && accounts.length > 0) {
+              const accountObj = accounts.find((a) => a.id === Number(i.account_id));
+              if (accountObj) accountDisplay = accountObj.name;
+            }
+
+            return `
                     <tr data-id="${i.id}">
                         <td>${i.title}</td>
                         <td>${
                           i.amount != null ? Number(i.amount).toFixed(2) : "-"
                         }</td>
                         <td>${i.stage || "-"}</td>
-                        <td>${i.account ? i.account.name : "-"}</td>
+                        <td>${accountDisplay}</td>
                         <td>${new Date(i.created_at).toLocaleDateString()}</td>
                         <td class="text-end">
                             <div class="btn-group">
@@ -218,8 +238,8 @@
                             </div>
                         </td>
                     </tr>
-                `
-          )
+                `;
+          })
           .join("");
 
         document

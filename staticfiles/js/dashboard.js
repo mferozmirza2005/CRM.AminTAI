@@ -21,7 +21,16 @@ async function loadDashboardData() {
     const data = await res.json();
     const dashboard = document.getElementById("dashboardStats");
 
-    // Header cards
+    // Header cards with modern design
+    const icons = {
+        Accounts: 'bi-building',
+        Contacts: 'bi-person-lines-fill',
+        Leads: 'bi-bullseye',
+        Deals: 'bi-person-workspace',
+        Campaigns: 'bi-megaphone',
+        Tasks: 'bi-check2-square'
+    };
+    
     const cardsHTML = `
         <div class="row g-4 mb-4">
             ${Object.entries({
@@ -33,11 +42,12 @@ async function loadDashboardData() {
                 Tasks: data.total_tasks
             }).map(([key, val]) => `
                 <div class="col-md-4 col-lg-2">
-                    <div class="card shadow-sm border-0">
-                        <div class="card-body text-center">
-                            <h4 class="fw-bold text-primary">${val}</h4>
-                            <p class="text-muted mb-0">${key}</p>
+                    <div class="stat-card">
+                        <div class="d-flex align-items-center mb-2">
+                            <i class="bi ${icons[key]} text-primary fs-4 me-2"></i>
                         </div>
+                        <div class="stat-value">${val || 0}</div>
+                        <div class="stat-label">${key}</div>
                     </div>
                 </div>
             `).join('')}
@@ -63,18 +73,33 @@ async function loadDashboardData() {
 
 function renderTableSection(title, items, cols) {
     if (!items?.length) return "";
-    const headers = cols.map(c => `<th>${c.replace("_", " ").toUpperCase()}</th>`).join("");
+    const headers = cols.map(c => {
+        const label = c.replace(/_/g, " ").replace(/\b\w/g, l => l.toUpperCase());
+        return `<th>${label}</th>`;
+    }).join("");
     const rows = items.map(i =>
-        `<tr>${cols.map(c => `<td>${i[c] ?? "-"}</td>`).join("")}</tr>`
+        `<tr>${cols.map(c => {
+            let value = i[c] ?? "-";
+            if (c.includes('date') || c.includes('created_at') || c.includes('due_date')) {
+                if (value !== "-" && value) {
+                    value = new Date(value).toLocaleDateString();
+                }
+            }
+            return `<td>${value}</td>`;
+        }).join("")}</tr>`
     ).join("");
     return `
-        <div class="card mt-4 shadow-sm border-0">
-            <div class="card-header bg-light fw-semibold">${title}</div>
+        <div class="card mt-4">
+            <div class="card-header">
+                <i class="bi bi-list-ul me-2"></i>${title}
+            </div>
             <div class="card-body p-0">
-                <table class="table table-hover mb-0">
-                    <thead class="table-light"><tr>${headers}</tr></thead>
-                    <tbody>${rows}</tbody>
-                </table>
+                <div class="table-responsive">
+                    <table class="table table-hover mb-0">
+                        <thead><tr>${headers}</tr></thead>
+                        <tbody>${rows}</tbody>
+                    </table>
+                </div>
             </div>
         </div>
     `;

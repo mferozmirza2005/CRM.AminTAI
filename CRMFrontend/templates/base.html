@@ -14,14 +14,23 @@
     <style>
         :root {
             --crm-accent: {{ crm_settings.accent_color|default:"#0d6efd" }};
+            {% if crm_settings and crm_settings.accent_color %}
+            --crm-accent-hover: {{ crm_settings.accent_color }};
+            {% else %}
+            --crm-accent-hover: #0b5ed7;
+            {% endif %}
         }
 
-        /* Apply accent to navbar and primary buttons */
+        /* Apply accent color globally */
         .navbar.navbar-dark.bg-primary,
         .btn-primary,
         .bg-primary {
             background-color: var(--crm-accent) !important;
             border-color: var(--crm-accent) !important;
+        }
+
+        .navbar {
+            background: linear-gradient(135deg, var(--crm-accent) 0%, var(--crm-accent-hover) 100%) !important;
         }
 
         .text-primary {
@@ -38,12 +47,37 @@
             color: #fff !important;
         }
 
+        .btn-primary {
+            background: linear-gradient(135deg, var(--crm-accent) 0%, var(--crm-accent-hover) 100%) !important;
+        }
+
+        .btn-primary:hover {
+            background: linear-gradient(135deg, var(--crm-accent-hover) 0%, var(--crm-accent) 100%) !important;
+        }
+
         /* Sidebar hover + active states */
         #sidebar .nav-link:hover,
         #sidebar .nav-link.active {
-            background-color: var(--crm-accent) !important;
+            background: linear-gradient(135deg, var(--crm-accent) 0%, var(--crm-accent-hover) 100%) !important;
             color: #fff !important;
             border-radius: 6px;
+        }
+
+        /* Stat cards accent border */
+        .stat-card::before {
+            background: linear-gradient(180deg, var(--crm-accent) 0%, var(--crm-accent-hover) 100%);
+        }
+
+        /* Modal header accent */
+        .modal-header {
+            background: linear-gradient(135deg, var(--crm-accent) 0%, var(--crm-accent-hover) 100%) !important;
+        }
+
+        /* Form focus accent */
+        .form-control:focus,
+        .form-select:focus {
+            border-color: var(--crm-accent) !important;
+            box-shadow: 0 0 0 0.2rem rgba(var(--crm-accent-rgb, 13, 110, 253), 0.15) !important;
         }
     </style>
     
@@ -52,57 +86,113 @@
 </head>
 
 <body
-    class="crm-body {% if crm_settings.theme_mode == 'dark' %}bg-dark text-light{% elif crm_settings.theme_mode == 'auto' %}theme-auto{% endif %}">
+    class="crm-body {% if crm_settings and crm_settings.theme_mode == 'dark' %}bg-dark text-light{% elif crm_settings and crm_settings.theme_mode == 'auto' %}theme-auto{% endif %}">
 
+    {% block navbar %}
+    {% if request.resolver_match.url_name != 'login' and request.resolver_match.url_name != 'signup' %}
     <!-- Topbar -->
-    <nav class="navbar navbar-dark bg-primary sticky-top shadow-sm"
-    style="background-color: {{ crm_settings.accent_color }} !important;">
+    <nav class="navbar navbar-dark bg-primary sticky-top shadow-sm">
         <div class="container-fluid d-flex justify-content-between align-items-center">
             <div class="d-flex align-items-center">
-                <button class="btn btn-outline-light me-3" id="sidebarToggle"><i class="bi bi-list"></i></button>
-                <a class="navbar-brand fw-bold fs-5" href="{% url 'dashboard' %}">AminTAI | CRM</a>
+                <button class="btn btn-outline-light me-3" id="sidebarToggle" type="button">
+                    <i class="bi bi-list"></i>
+                </button>
+                <a class="navbar-brand fw-bold fs-5" href="{% url 'dashboard' %}">
+                    <i class="bi bi-briefcase me-2"></i>AminTAI | CRM
+                </a>
             </div>
             <div class="d-flex align-items-center gap-3">
-                <span class="text-white small" id="userEmail"></span>
-                <a href="{% url 'logout' %}" class="btn btn-light btn-sm" id="logoutBtn"><i
-                        class="bi bi-box-arrow-right"></i> Logout</a>
+                <span class="text-white small d-none d-md-inline" id="userEmail"></span>
+                <a href="{% url 'logout' %}" class="btn btn-light btn-sm" id="logoutBtn">
+                    <i class="bi bi-box-arrow-right"></i> 
+                    <span class="d-none d-sm-inline ms-1">Logout</span>
+                </a>
             </div>
         </div>
     </nav>
+    {% endif %}
+    {% endblock %}
 
+    {% block sidebar %}
+    {% if request.resolver_match.url_name != 'login' and request.resolver_match.url_name != 'signup' %}
     <div class="d-flex">
         <!-- Sidebar -->
-        <aside id="sidebar" class="crm-sidebar shadow-sm border-end" style="background-color: var(--crm-accent-bg, #fff);"">
-            <ul class="nav flex-column mt-3">
-                <li class="nav-item"><a class="nav-link" href="{% url 'dashboard' %}"><i class="bi bi-house-door"></i>
-                        Dashboard</a></li>
-                <li class="nav-item"><a class="nav-link" href="{% url 'accounts' %}"><i class="bi bi-building"></i>
-                        Accounts</a></li>
-                <li class="nav-item"><a class="nav-link" href="{% url 'contacts' %}"><i
-                            class="bi bi-person-lines-fill"></i> Contacts</a></li>
-                <li class="nav-item"><a class="nav-link" href="{% url 'leads' %}"><i class="bi bi-bullseye"></i>
-                        Leads</a></li>
-                <li class="nav-item"><a class="nav-link" href="{% url 'deals' %}"><i class="bi bi-person-workspace"></i>
-                        Deals</a></li>
-                <li class="nav-item"><a class="nav-link" href="{% url 'campaigns' %}"><i class="bi bi-megaphone"></i>
-                        Campaigns</a></li>
-                <li class="nav-item"><a class="nav-link" href="{% url 'tasks' %}"><i class="bi bi-check2-square"></i>
-                        Tasks</a></li>
+        <aside id="sidebar" class="crm-sidebar shadow-sm border-end">
+            <ul class="nav flex-column">
+                <li class="nav-item">
+                    <a class="nav-link" href="{% url 'dashboard' %}">
+                        <i class="bi bi-house-door"></i>
+                        <span>Dashboard</span>
+                    </a>
+                </li>
+                <li class="nav-item">
+                    <a class="nav-link" href="{% url 'accounts' %}">
+                        <i class="bi bi-building"></i>
+                        <span>Accounts</span>
+                    </a>
+                </li>
+                <li class="nav-item">
+                    <a class="nav-link" href="{% url 'contacts' %}">
+                        <i class="bi bi-person-lines-fill"></i>
+                        <span>Contacts</span>
+                    </a>
+                </li>
+                <li class="nav-item">
+                    <a class="nav-link" href="{% url 'leads' %}">
+                        <i class="bi bi-bullseye"></i>
+                        <span>Leads</span>
+                    </a>
+                </li>
+                <li class="nav-item">
+                    <a class="nav-link" href="{% url 'deals' %}">
+                        <i class="bi bi-person-workspace"></i>
+                        <span>Deals</span>
+                    </a>
+                </li>
+                <li class="nav-item">
+                    <a class="nav-link" href="{% url 'campaigns' %}">
+                        <i class="bi bi-megaphone"></i>
+                        <span>Campaigns</span>
+                    </a>
+                </li>
+                <li class="nav-item">
+                    <a class="nav-link" href="{% url 'tasks' %}">
+                        <i class="bi bi-check2-square"></i>
+                        <span>Tasks</span>
+                    </a>
+                </li>
                 {% if request.user.is_superuser %}
-                <li class="nav-item"><a class="nav-link" href="{% url 'user_management' %}"><i class="bi bi-people"></i>
-                        Users</a></li>
-                <li class="nav-item"><a class="nav-link" href="{% url 'settings' %}"><i class="bi bi-gear"></i>
-                        Settings</a></li>
+                <li class="nav-item mt-3">
+                    <hr class="my-2" style="opacity: 0.2;">
+                </li>
+                <li class="nav-item">
+                    <a class="nav-link" href="{% url 'user_management' %}">
+                        <i class="bi bi-people"></i>
+                        <span>Users</span>
+                    </a>
+                </li>
+                <li class="nav-item">
+                    <a class="nav-link" href="{% url 'settings' %}">
+                        <i class="bi bi-gear"></i>
+                        <span>Settings</span>
+                    </a>
+                </li>
                 {% endif %}
-
             </ul>
         </aside>
 
         <!-- Main Content -->
         <main class="crm-main flex-grow-1 p-4">
+    {% else %}
+    <!-- Main Content (No Sidebar) -->
+    <main class="crm-main w-100">
+    {% endif %}
             {% block content %}{% endblock %}
         </main>
+    {% if request.resolver_match.url_name != 'login' and request.resolver_match.url_name != 'signup' %}
     </div>
+    {% endif %}
+    {% endblock %}
 
     <!-- Scripts -->
     <script src="https://cdn.jsdelivr.net/npm/bootstrap@5.3.2/dist/js/bootstrap.bundle.min.js"></script>
@@ -110,7 +200,7 @@
 
     <script>
         (function autoTheme() {
-            const mode = "{{ crm_settings.theme_mode }}";
+            const mode = "{{ crm_settings.theme_mode|default:'light' }}";
             if (mode === "auto") {
                 const darkMode = window.matchMedia("(prefers-color-scheme: dark)").matches;
                 document.body.classList.toggle("bg-dark", darkMode);
@@ -118,10 +208,33 @@
             }
         })();
 
-        // Sidebar toggle
-        document.getElementById("sidebarToggle").addEventListener("click", function () {
-            document.getElementById("sidebar").classList.toggle("collapsed");
-        });
+        // Sidebar toggle (only if sidebar exists)
+        const sidebarToggle = document.getElementById("sidebarToggle");
+        const sidebar = document.getElementById("sidebar");
+        
+        if (sidebarToggle && sidebar && !sidebar.classList.contains('d-none')) {
+            sidebarToggle.addEventListener("click", function () {
+                sidebar.classList.toggle("collapsed");
+                // On mobile, toggle visibility
+                if (window.innerWidth <= 992) {
+                    if (sidebar.classList.contains("collapsed")) {
+                        sidebar.style.left = "-260px";
+                    } else {
+                        sidebar.style.left = "0";
+                    }
+                }
+            });
+            
+            // Close sidebar on mobile when clicking outside
+            if (window.innerWidth <= 992) {
+                document.addEventListener("click", function(e) {
+                    if (!sidebar.contains(e.target) && !sidebarToggle.contains(e.target)) {
+                        sidebar.classList.add("collapsed");
+                        sidebar.style.left = "-260px";
+                    }
+                });
+            }
+        }
 
         // Highlight active menu
         const currentUrl = window.location.pathname;

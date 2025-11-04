@@ -3,15 +3,17 @@
 {% block title %}Campaigns - CRM{% endblock %}
 
 {% block content %}
-<div class="d-flex justify-content-between align-items-center mb-3">
+<div class="page-header">
   <h2 class="mb-0">Campaigns</h2>
-  <button class="btn btn-outline-primary" id="createBtn">
-    <i class="bi bi-plus-lg"></i> Create
+  <button class="btn btn-primary" id="createBtn">
+    <i class="bi bi-plus-lg me-2"></i>Create Campaign
   </button>
 </div>
 
-<div class="table-responsive">
-  <table class="table table-striped" id="dataTable">
+<div class="card">
+  <div class="card-body p-0">
+    <div class="table-responsive">
+      <table class="table table-hover mb-0" id="dataTable">
     <thead>
       <tr>
         <th>Name</th>
@@ -21,8 +23,10 @@
         <th class="text-end">Actions</th>
       </tr>
     </thead>
-    <tbody></tbody>
-  </table>
+    <tbody>    </tbody>
+      </table>
+    </div>
+  </div>
 </div>
 
 <!-- Modal -->
@@ -117,9 +121,10 @@
         if (!rCamp.ok)
           return console.error("Failed to load campaigns", rCamp.status);
 
-        // populate owner and accounts selects
+        // Store users for lookup when rendering table
+        let users = [];
         if (rUsers.ok) {
-          const users = await rUsers.json();
+          users = await rUsers.json();
           const ownerSelect = document.getElementById("owner");
           users.forEach((u) => {
             const opt = document.createElement("option");
@@ -152,11 +157,17 @@
             const budget = i.budget != null ? Number(i.budget).toFixed(2) : "-";
             let ownerDisplay = "-";
             if (i.owner) {
-              const ownerObj = typeof i.owner === 'object' ? i.owner : (typeof users !== 'undefined' ? users.find((u) => u.id === i.owner) : null);
-              if (ownerObj) ownerDisplay = ((ownerObj.first_name || "") + (ownerObj.last_name ? " " + ownerObj.last_name : "")).trim() + " <" + (ownerObj.email || "") + ">";
-            } else if (i.owner_id && typeof users !== 'undefined') {
-              const ownerObj = users.find((u) => u.id === i.owner_id);
-              if (ownerObj) ownerDisplay = ((ownerObj.first_name || "") + (ownerObj.last_name ? " " + ownerObj.last_name : "")).trim() + " <" + (ownerObj.email || "") + ">";
+              // Owner may be an object or an ID
+              const ownerObj = typeof i.owner === 'object' ? i.owner : 
+                (users.length > 0 ? users.find((u) => u.id === Number(i.owner)) : null);
+              if (ownerObj) {
+                ownerDisplay = ((ownerObj.first_name || "") + (ownerObj.last_name ? " " + ownerObj.last_name : "")).trim() + " <" + (ownerObj.email || "") + ">";
+              }
+            } else if (i.owner_id && users.length > 0) {
+              const ownerObj = users.find((u) => u.id === Number(i.owner_id));
+              if (ownerObj) {
+                ownerDisplay = ((ownerObj.first_name || "") + (ownerObj.last_name ? " " + ownerObj.last_name : "")).trim() + " <" + (ownerObj.email || "") + ">";
+              }
             }
 
             return `

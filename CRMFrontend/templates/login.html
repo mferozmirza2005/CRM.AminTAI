@@ -3,23 +3,34 @@
 {% block title %}Login - CRM{% endblock %}
 
 {% block content %}
-<div class="col-md-4 offset-md-4 mt-5">
-  <h3 class="text-center mb-4">Sign In</h3>
-  <form id="loginForm">
-    <div class="mb-3">
-      <label>Email</label>
-      <input type="email" class="form-control" id="email" required />
-    </div>
-    <div class="mb-3">
-      <label>Password</label>
-      <input type="password" class="form-control" id="password" required />
-    </div>
-    <button class="btn btn-primary w-100">Login</button>
-    <p class="text-center mt-3">
-      Don’t have an account? <a href="{% url 'signup' %}">Sign up</a>
-    </p>
-  </form>
-  <div id="loginMessage" class="text-danger text-center mt-2"></div>
+<div class="auth-container">
+  <div class="auth-card">
+    <h3>
+      <i class="bi bi-box-arrow-in-right me-2"></i>Sign In
+    </h3>
+    <form id="loginForm">
+      <div class="mb-3">
+        <label class="form-label">
+          <i class="bi bi-envelope me-2"></i>Email
+        </label>
+        <input type="email" class="form-control" id="email" placeholder="Enter your email" required />
+      </div>
+      <div class="mb-3">
+        <label class="form-label">
+          <i class="bi bi-lock me-2"></i>Password
+        </label>
+        <input type="password" class="form-control" id="password" placeholder="Enter your password" required />
+      </div>
+      <button type="submit" class="btn btn-primary w-100">
+        <i class="bi bi-box-arrow-in-right me-2"></i>Sign In
+      </button>
+      <p class="text-center mt-4 mb-0">
+        Don't have an account? 
+        <a href="{% url 'signup' %}" class="text-primary fw-semibold">Sign up</a>
+      </p>
+    </form>
+    <div id="loginMessage" class="alert alert-danger mt-3 d-none" role="alert"></div>
+  </div>
 </div>
 {% endblock %}
 
@@ -47,8 +58,9 @@
       localStorage.setItem("refresh", data.refresh);
       window.location.href = "/dashboard/";
     } else {
-      document.getElementById("loginMessage").textContent =
-        data.detail || "Invalid credentials.";
+      const messageEl = document.getElementById("loginMessage");
+      messageEl.textContent = data.detail || "Invalid credentials.";
+      messageEl.classList.remove("d-none");
     }
   });
 </script>
