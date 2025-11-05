@@ -10,21 +10,43 @@
   </button>
 </div>
 
+<div class="d-flex align-items-center gap-2 mb-3">
+  <input type="search" id="searchInput" class="form-control" placeholder="Search deals..." style="max-width: 320px;">
+  <select id="stageFilter" class="form-select" style="max-width: 220px;">
+    <option value="">All stages</option>
+    <option value="PROSPECT">Prospect</option>
+    <option value="QUALIFICATION">Qualification</option>
+    <option value="PROPOSAL">Proposal</option>
+    <option value="NEGOTIATION">Negotiation</option>
+    <option value="WON">Won</option>
+    <option value="LOST">Lost</option>
+  </select>
+  <select id="accountFilter" class="form-select" style="max-width: 220px;">
+    <option value="">All accounts</option>
+  </select>
+  <button class="btn btn-outline-secondary" id="clearSearchBtn">Clear</button>
+  <div class="ms-auto d-flex align-items-center gap-2">
+    <button class="btn btn-outline-secondary btn-sm" id="prevPage">Prev</button>
+    <span id="pageInfo" class="small text-muted"></span>
+    <button class="btn btn-outline-secondary btn-sm" id="nextPage">Next</button>
+  </div>
+</div>
+
 <div class="card">
   <div class="card-body p-0">
     <div class="table-responsive">
       <table class="table table-hover mb-0" id="dataTable">
-    <thead>
-      <tr>
-        <th>Title</th>
-        <th>Amount</th>
-        <th>Stage</th>
-        <th>Account</th>
-        <th>Created</th>
-        <th class="text-end">Actions</th>
-      </tr>
-    </thead>
-    <tbody>    </tbody>
+        <thead>
+          <tr>
+            <th>Title</th>
+            <th>Amount</th>
+            <th>Stage</th>
+            <th>Account</th>
+            <th>Created</th>
+            <th class="text-end">Actions</th>
+          </tr>
+        </thead>
+        <tbody> </tbody>
       </table>
     </div>
   </div>
@@ -36,12 +58,7 @@
     <div class="modal-content">
       <div class="modal-header">
         <h5 class="modal-title" id="modalTitle">Create Deal</h5>
-        <button
-          type="button"
-          class="btn-close"
-          data-bs-dismiss="modal"
-          aria-label="Close"
-        ></button>
+        <button type="button" class="btn-close" data-bs-dismiss="modal" aria-label="Close"></button>
       </div>
       <div class="modal-body">
         <form id="itemForm">
@@ -53,13 +70,7 @@
           <div class="row">
             <div class="mb-3 col-6">
               <label class="form-label">Amount</label>
-              <input
-                type="number"
-                id="amount"
-                class="form-control"
-                step="0.01"
-                min="0"
-              />
+              <input type="number" id="amount" class="form-control" step="0.01" min="0" />
             </div>
             <div class="mb-3 col-6">
               <label class="form-label">Stage</label>
@@ -131,12 +142,16 @@
     const token = () => localStorage.getItem("access");
     const modalEl = document.getElementById("itemModal");
     const modal = new bootstrap.Modal(modalEl);
+    let currentPage = 1;
+    let lastQuery = "";
+    let stageFilter = "";
+    let accountFilter = "";
 
     async function load() {
       try {
         const [rDeals, rUsers, rAccounts, rLeads, rContacts, rCampaigns] =
           await Promise.all([
-            fetch(base, { headers: { Authorization: "Bearer " + token() } }),
+            fetch(`${base}?page=${currentPage}${lastQuery ? `&q=${encodeURIComponent(lastQuery)}` : ''}${stageFilter ? `&stage=${encodeURIComponent(stageFilter)}` : ''}${accountFilter ? `&account=${encodeURIComponent(accountFilter)}` : ''}`, { headers: { Authorization: "Bearer " + token() } }),
             fetch("/api/users/", {
               headers: { Authorization: "Bearer " + token() },
             }),
@@ -159,18 +174,33 @@
         // Store accounts for lookup when rendering table
         let accounts = [];
         if (rAccounts.ok) {
-          accounts = await rAccounts.json();
+          const accountsRaw = await rAccounts.json();
+          accounts = Array.isArray(accountsRaw) ? accountsRaw : (accountsRaw.results || []);
           const acctSel = document.getElementById("account");
+          acctSel.innerHTML = '<option value="">— Select account —</option>';
           accounts.forEach((a) => acctSel.appendChild(new Option(a.name, a.id)));
+          // populate toolbar account filter
+          const accountFilterSel = document.getElementById("accountFilter");
+          if (accountFilterSel) {
+            const prevVal = accountFilterSel.value;
+            accountFilterSel.innerHTML = '<option value="">All accounts</option>';
+            accounts.forEach((a) => accountFilterSel.appendChild(new Option(a.name, a.id)));
+            // restore selection if still present
+            if (prevVal) accountFilterSel.value = prevVal;
+          }
         }
         if (rLeads.ok) {
-          const leads = await rLeads.json();
+          const leadsRaw = await rLeads.json();
+          const leads = Array.isArray(leadsRaw) ? leadsRaw : (leadsRaw.results || []);
           const leadSel = document.getElementById("lead");
+          leadSel.innerHTML = '<option value="">— None —</option>';
           leads.forEach((l) => leadSel.appendChild(new Option(l.title, l.id)));
         }
         if (rContacts.ok) {
-          const contacts = await rContacts.json();
+          const contactsRaw = await rContacts.json();
+          const contacts = Array.isArray(contactsRaw) ? contactsRaw : (contactsRaw.results || []);
           const contactSel = document.getElementById("contact");
+          contactSel.innerHTML = '<option value="">— None —</option>';
           contacts.forEach((c) =>
             contactSel.appendChild(
               new Option(
@@ -181,29 +211,40 @@
           );
         }
         if (rUsers.ok) {
-          const users = await rUsers.json();
+          const usersRaw = await rUsers.json();
+          const users = Array.isArray(usersRaw) ? usersRaw : (usersRaw.results || []);
           const ownerSel = document.getElementById("owner");
+          ownerSel.innerHTML = '<option value="">— None —</option>';
           users.forEach((u) =>
             ownerSel.appendChild(
               new Option(
                 (
                   (u.first_name || "") + (u.last_name ? " " + u.last_name : "")
                 ).trim() +
-                  " <" +
-                  u.email +
-                  ">",
+                " <" +
+                u.email +
+                ">",
                 u.id
               )
             )
           );
         }
         if (rCampaigns.ok) {
-          const camps = await rCampaigns.json();
+          const campsRaw = await rCampaigns.json();
+          const camps = Array.isArray(campsRaw) ? campsRaw : (campsRaw.results || []);
           const campSel = document.getElementById("campaign");
+          campSel.innerHTML = '<option value="">— None —</option>';
           camps.forEach((c) => campSel.appendChild(new Option(c.name, c.id)));
         }
 
-        const data = await rDeals.json();
+        const raw = await rDeals.json();
+        const data = Array.isArray(raw) ? raw : (raw.results || []);
+        const total = Array.isArray(raw) ? data.length : (raw.count || data.length);
+        const pageSize = Array.isArray(raw) ? data.length : (raw.results ? raw.results.length : data.length);
+        const totalPages = pageSize ? Math.ceil(total / pageSize) : 1;
+        document.getElementById("pageInfo").textContent = `Page ${currentPage} of ${totalPages}`;
+        document.getElementById("prevPage").disabled = currentPage <= 1;
+        document.getElementById("nextPage").disabled = currentPage >= totalPages;
         const tbody = document.querySelector("#dataTable tbody");
         tbody.innerHTML = data
           .map((i) => {
@@ -224,9 +265,8 @@
             return `
                     <tr data-id="${i.id}">
                         <td>${i.title}</td>
-                        <td>${
-                          i.amount != null ? Number(i.amount).toFixed(2) : "-"
-                        }</td>
+                        <td>${i.amount != null ? Number(i.amount).toFixed(2) : "-"
+              }</td>
                         <td>${i.stage || "-"}</td>
                         <td>${accountDisplay}</td>
                         <td>${new Date(i.created_at).toLocaleDateString()}</td>
@@ -256,6 +296,43 @@
       }
     }
 
+    // Search & filters
+    const searchInput = document.getElementById("searchInput");
+    const stageSel = document.getElementById("stageFilter");
+    const accountSel = document.getElementById("accountFilter");
+    const clearSearchBtn = document.getElementById("clearSearchBtn");
+    let searchTimer;
+    searchInput.addEventListener("input", () => {
+      clearTimeout(searchTimer);
+      searchTimer = setTimeout(() => {
+        lastQuery = searchInput.value.trim();
+        currentPage = 1;
+        load();
+      }, 300);
+    });
+    stageSel.addEventListener("change", () => {
+      stageFilter = stageSel.value || "";
+      currentPage = 1;
+      load();
+    });
+    accountSel.addEventListener("change", () => {
+      accountFilter = accountSel.value || "";
+      currentPage = 1;
+      load();
+    });
+    clearSearchBtn.addEventListener("click", () => {
+      searchInput.value = "";
+      lastQuery = "";
+      stageSel.value = "";
+      accountSel.value = "";
+      stageFilter = "";
+      accountFilter = "";
+      currentPage = 1;
+      load();
+    });
+    document.getElementById("prevPage").addEventListener("click", () => { if (currentPage > 1) { currentPage -= 1; load(); } });
+    document.getElementById("nextPage").addEventListener("click", () => { currentPage += 1; load(); });
+
     function openCreate() {
       document.getElementById("modalTitle").textContent = "Create Deal";
       document.getElementById("itemForm").reset();
@@ -274,17 +351,12 @@
       document.getElementById("title").value = it.title || "";
       document.getElementById("amount").value = it.amount || "";
       document.getElementById("stage").value = it.stage || "";
-      document.getElementById("account").value = it.account
-        ? it.account.id
-        : "";
-      document.getElementById("lead").value = it.lead ? it.lead.id : "";
-      document.getElementById("contact").value = it.contact
-        ? it.contact.id
-        : "";
-      document.getElementById("owner").value = it.owner ? it.owner.id : "";
-      document.getElementById("campaign").value = it.campaign
-        ? it.campaign.id
-        : "";
+      const getId = (v) => v ? String(typeof v === 'object' ? v.id : v) : "";
+      document.getElementById("account").value = getId(it.account);
+      document.getElementById("lead").value = getId(it.lead);
+      document.getElementById("contact").value = getId(it.contact);
+      document.getElementById("owner").value = getId(it.owner);
+      document.getElementById("campaign").value = getId(it.campaign);
       document.getElementById("close_date").value = it.close_date || "";
       Array.from(
         document.querySelectorAll("#itemForm input, #itemForm select")
@@ -305,17 +377,12 @@
       document.getElementById("title").value = it.title || "";
       document.getElementById("amount").value = it.amount || "";
       document.getElementById("stage").value = it.stage || "";
-      document.getElementById("account").value = it.account
-        ? it.account.id
-        : "";
-      document.getElementById("lead").value = it.lead ? it.lead.id : "";
-      document.getElementById("contact").value = it.contact
-        ? it.contact.id
-        : "";
-      document.getElementById("owner").value = it.owner ? it.owner.id : "";
-      document.getElementById("campaign").value = it.campaign
-        ? it.campaign.id
-        : "";
+      const getId = (v) => v ? String(typeof v === 'object' ? v.id : v) : "";
+      document.getElementById("account").value = getId(it.account);
+      document.getElementById("lead").value = getId(it.lead);
+      document.getElementById("contact").value = getId(it.contact);
+      document.getElementById("owner").value = getId(it.owner);
+      document.getElementById("campaign").value = getId(it.campaign);
       document.getElementById("close_date").value = it.close_date || "";
       Array.from(
         document.querySelectorAll("#itemForm input, #itemForm select")

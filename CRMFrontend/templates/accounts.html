@@ -10,20 +10,31 @@
   </button>
 </div>
 
+<div class="d-flex align-items-center gap-2 mb-3">
+  <input type="search" id="searchInput" class="form-control" placeholder="Search accounts..." style="max-width: 320px;">
+  <button class="btn btn-outline-secondary" id="clearSearchBtn">Clear</button>
+  <div class="ms-auto d-flex align-items-center gap-2">
+    <button class="btn btn-outline-secondary btn-sm" id="prevPage">Prev</button>
+    <span id="pageInfo" class="small text-muted"></span>
+    <button class="btn btn-outline-secondary btn-sm" id="nextPage">Next</button>
+  </div>
+
+</div>
+
 <div class="card">
   <div class="card-body p-0">
     <div class="table-responsive">
       <table class="table table-hover mb-0" id="dataTable">
-    <thead>
-      <tr>
-        <th>Name</th>
-        <th>Region</th>
-        <th>Owner</th>
-        <th>Created</th>
-        <th class="text-end">Actions</th>
-      </tr>
-    </thead>
-    <tbody>    </tbody>
+        <thead>
+          <tr>
+            <th>Name</th>
+            <th>Region</th>
+            <th>Owner</th>
+            <th>Created</th>
+            <th class="text-end">Actions</th>
+          </tr>
+        </thead>
+        <tbody> </tbody>
       </table>
     </div>
   </div>
@@ -35,12 +46,7 @@
     <div class="modal-content">
       <div class="modal-header">
         <h5 class="modal-title" id="modalTitle">Create Account</h5>
-        <button
-          type="button"
-          class="btn-close"
-          data-bs-dismiss="modal"
-          aria-label="Close"
-        ></button>
+        <button type="button" class="btn-close" data-bs-dismiss="modal" aria-label="Close"></button>
       </div>
       <div class="modal-body">
         <form id="itemForm">
@@ -79,6 +85,8 @@
     const token = () => localStorage.getItem("access");
     const modalEl = document.getElementById("itemModal");
     const modal = new bootstrap.Modal(modalEl);
+    let currentPage = 1;
+    let lastQuery = "";
 
     async function load() {
       // prefetch users for owner select and accounts list concurrently
@@ -87,31 +95,42 @@
           fetch("/api/users/", {
             headers: { Authorization: "Bearer " + token() },
           }),
-          fetch(base, { headers: { Authorization: "Bearer " + token() } }),
+          fetch(`${base}?page=${currentPage}${lastQuery ? `&q=${encodeURIComponent(lastQuery)}` : ''}`, { headers: { Authorization: "Bearer " + token() } }),
         ]);
 
         let users = [];
         if (resUsers.ok) {
-          users = await resUsers.json();
+          const usersRaw = await resUsers.json();
+          users = Array.isArray(usersRaw) ? usersRaw : (usersRaw.results || []);
           const ownerSelect = document.getElementById("owner");
-          ownerSelect.innerHTML = '<option value="">— None —</option>';
-          users.forEach((u) => {
-            const opt = document.createElement("option");
-            opt.value = u.id;
-            opt.textContent =
-              (
-                (u.first_name || "") + (u.last_name ? " " + u.last_name : "")
-              ).trim() +
-              " <" +
-              u.email +
-              ">";
-            ownerSelect.appendChild(opt);
-          });
+          // Only repopulate if not already populated to avoid duplicate options
+          if (ownerSelect.options.length <= 1) {
+            ownerSelect.innerHTML = '<option value="">— None —</option>';
+            users.forEach((u) => {
+              const opt = document.createElement("option");
+              opt.value = u.id;
+              opt.textContent =
+                (
+                  (u.first_name || "") + (u.last_name ? " " + u.last_name : "")
+                ).trim() +
+                " <" +
+                u.email +
+                ">";
+              ownerSelect.appendChild(opt);
+            });
+          }
         }
 
         if (!resAccounts.ok)
           return console.error("Failed to load accounts", resAccounts.status);
-        const data = await resAccounts.json();
+        const raw = await resAccounts.json();
+        const data = Array.isArray(raw) ? raw : (raw.results || []);
+        const total = Array.isArray(raw) ? data.length : (raw.count || data.length);
+        const pageSize = Array.isArray(raw) ? data.length : (raw.results ? raw.results.length : data.length);
+        const totalPages = pageSize ? Math.ceil(total / pageSize) : 1;
+        document.getElementById("pageInfo").textContent = `Page ${currentPage} of ${totalPages}`;
+        document.getElementById("prevPage").disabled = currentPage <= 1;
+        document.getElementById("nextPage").disabled = currentPage >= totalPages;
         const tbody = document.querySelector("#dataTable tbody");
         tbody.innerHTML = data
           .map((i) => {
@@ -160,6 +179,31 @@
       }
     }
 
+    // Search handlers
+    const searchInput = document.getElementById("searchInput");
+    const clearSearchBtn = document.getElementById("clearSearchBtn");
+    let searchTimer;
+    searchInput.addEventListener("input", () => {
+      clearTimeout(searchTimer);
+      searchTimer = setTimeout(() => {
+        lastQuery = searchInput.value.trim();
+        currentPage = 1;
+        load();
+      }, 300);
+    });
+    clearSearchBtn.addEventListener("click", () => {
+      searchInput.value = "";
+      lastQuery = "";
+      currentPage = 1;
+      load();
+    });
+    document.getElementById("prevPage").addEventListener("click", () => {
+      if (currentPage > 1) { currentPage -= 1; load(); }
+    });
+    document.getElementById("nextPage").addEventListener("click", () => {
+      currentPage += 1; load();
+    });
+
     function openCreate() {
       document.getElementById("modalTitle").textContent = "Create Account";
       document.getElementById("itemForm").reset();
@@ -177,7 +221,7 @@
       document.getElementById("modalTitle").textContent = "View Account";
       document.getElementById("name").value = it.name || "";
       document.getElementById("region").value = it.region || "";
-  document.getElementById("owner").value = it.owner ? (typeof it.owner === 'object' ? it.owner.id : it.owner) : "";
+      document.getElementById("owner").value = it.owner ? String(typeof it.owner === 'object' ? it.owner.id : it.owner) : "";
       Array.from(document.querySelectorAll("#itemForm input")).forEach(
         (i) => (i.disabled = true)
       );
@@ -197,7 +241,7 @@
       document.getElementById("itemId").value = it.id;
       document.getElementById("name").value = it.name || "";
       document.getElementById("region").value = it.region || "";
-  document.getElementById("owner").value = it.owner ? (typeof it.owner === 'object' ? it.owner.id : it.owner) : "";
+      document.getElementById("owner").value = it.owner ? String(typeof it.owner === 'object' ? it.owner.id : it.owner) : "";
       Array.from(document.querySelectorAll("#itemForm input")).forEach(
         (i) => (i.disabled = false)
       );

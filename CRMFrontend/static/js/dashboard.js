@@ -36,17 +36,17 @@ async function loadDashboardData() {
         Campaigns: 'bi-megaphone',
         Tasks: 'bi-check2-square'
     };
-    
+
     const cardsHTML = `
         <div class="row g-4 mb-4">
             ${Object.entries({
-                Accounts: data.total_accounts,
-                Contacts: data.total_contacts,
-                Leads: data.total_leads,
-                Deals: data.total_deals,
-                Campaigns: data.total_campaigns,
-                Tasks: data.total_tasks
-            }).map(([key, val]) => `
+        Accounts: data.total_accounts,
+        Contacts: data.total_contacts,
+        Leads: data.total_leads,
+        Deals: data.total_deals,
+        Campaigns: data.total_campaigns,
+        Tasks: data.total_tasks
+    }).map(([key, val]) => `
                 <div class="col-md-4 col-lg-2">
                     <div class="stat-card">
                         <div class="d-flex align-items-center mb-2">
@@ -66,7 +66,7 @@ async function loadDashboardData() {
                         <div class="d-flex align-items-center justify-content-between">
                             <div>
                                 <h6 class="text-muted mb-1">Total Deal Value</h6>
-                                <h3 class="mb-0 fw-bold text-primary">$${parseFloat(data.total_deal_value).toLocaleString('en-US', {minimumFractionDigits: 2, maximumFractionDigits: 2})}</h3>
+                                <h3 class="mb-0 fw-bold text-primary">Rs. ${parseFloat(data.total_deal_value).toLocaleString('en-US', { minimumFractionDigits: 2, maximumFractionDigits: 2 })}</h3>
                             </div>
                             <div class="text-end">
                                 <div class="text-muted small">Last 7 Days</div>
@@ -97,6 +97,24 @@ async function loadDashboardData() {
     }
 
     dashboard.innerHTML = cardsHTML + detailsHTML;
+
+    // Hook up dashboard table filter
+    const filterInput = document.getElementById("dashboardFilter");
+    const clearBtn = document.getElementById("clearDashboardFilter");
+    if (filterInput) {
+        const applyFilter = () => {
+            const term = filterInput.value.trim().toLowerCase();
+            document.querySelectorAll('#dashboardStats table tbody tr').forEach(tr => {
+                const text = tr.textContent.toLowerCase();
+                tr.style.display = term && !text.includes(term) ? 'none' : '';
+            });
+        };
+        filterInput.addEventListener('input', () => {
+            clearTimeout(window.__dashFilterTimer);
+            window.__dashFilterTimer = setTimeout(applyFilter, 200);
+        });
+        clearBtn?.addEventListener('click', () => { filterInput.value = ''; applyFilter(); });
+    }
 
     // Render analytics charts - always show charts section
     const chartsSection = document.getElementById("analyticsCharts");
@@ -131,7 +149,7 @@ function renderAnalyticsCharts(data) {
         console.error('Chart.js is not loaded');
         return;
     }
-    
+
     console.log("Rendering charts with data:", {
         deal_stages: data.deal_stages,
         lead_statuses: data.lead_statuses,
@@ -357,7 +375,7 @@ function renderAnalyticsCharts(data) {
             data: {
                 labels: stages,
                 datasets: [{
-                    label: 'Total Value ($)',
+                    label: 'Total Value (Rs.)',
                     data: values,
                     backgroundColor: chartColors.success + '80',
                     borderColor: chartColors.success,
@@ -373,8 +391,8 @@ function renderAnalyticsCharts(data) {
                     },
                     tooltip: {
                         callbacks: {
-                            label: function(context) {
-                                return 'Value: $' + parseFloat(context.parsed.y).toLocaleString('en-US', {minimumFractionDigits: 2, maximumFractionDigits: 2});
+                            label: function (context) {
+                                return 'Value: Rs.' + parseFloat(context.parsed.y).toLocaleString('en-US', { minimumFractionDigits: 2, maximumFractionDigits: 2 });
                             }
                         }
                     }
@@ -383,8 +401,8 @@ function renderAnalyticsCharts(data) {
                     y: {
                         beginAtZero: true,
                         ticks: {
-                            callback: function(value) {
-                                return '$' + value.toLocaleString();
+                            callback: function (value) {
+                                return 'Rs.' + value.toLocaleString();
                             }
                         }
                     }
@@ -416,7 +434,7 @@ function renderAnalyticsCharts(data) {
                         yAxisID: 'y'
                     },
                     {
-                        label: 'Budget ($)',
+                        label: 'Budget (Rs.)',
                         data: campaigns.map(c => parseFloat(c.budget || 0)),
                         backgroundColor: chartColors.warning,
                         borderColor: chartColors.warning,
@@ -452,8 +470,8 @@ function renderAnalyticsCharts(data) {
                             drawOnChartArea: false,
                         },
                         ticks: {
-                            callback: function(value) {
-                                return '$' + value.toLocaleString();
+                            callback: function (value) {
+                                return 'Rs.' + value.toLocaleString();
                             }
                         }
                     }
@@ -478,7 +496,7 @@ function renderTableSection(title, items, cols) {
                 }
             } else if (c === 'amount' || c === 'budget') {
                 if (value !== "-" && value !== null && value !== undefined) {
-                    value = '$' + parseFloat(value).toLocaleString('en-US', {minimumFractionDigits: 2, maximumFractionDigits: 2});
+                    value = 'Rs.' + parseFloat(value).toLocaleString('en-US', { minimumFractionDigits: 2, maximumFractionDigits: 2 });
                 }
             } else if (c === 'completed') {
                 value = value ? '✅' : '❌';

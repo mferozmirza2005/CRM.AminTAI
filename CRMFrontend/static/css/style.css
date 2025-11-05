@@ -13,32 +13,32 @@
     --crm-danger: #dc3545;
     --crm-warning: #ffc107;
     --crm-info: #0dcaf0;
-    
+
     /* Dark mode colors */
     --crm-dark-bg: #121212;
     --crm-dark-surface: #1e1e1e;
     --crm-dark-border: #333;
-    --crm-dark-text: #e0e0e0;
+    --crm-dark-text: #ffffff;
     --crm-dark-text-secondary: #b0b0b0;
-    
+
     /* Light mode colors */
     --crm-light-bg: #f8f9fa;
     --crm-light-surface: #ffffff;
     --crm-light-border: #e9ecef;
-    --crm-light-text: #212529;
+    --crm-light-text: #909599;
     --crm-light-text-secondary: #6c757d;
-    
+
     /* Shadows */
     --crm-shadow-sm: 0 2px 4px rgba(0, 0, 0, 0.05);
     --crm-shadow: 0 4px 6px rgba(0, 0, 0, 0.07);
     --crm-shadow-md: 0 8px 16px rgba(0, 0, 0, 0.1);
     --crm-shadow-lg: 0 12px 24px rgba(0, 0, 0, 0.15);
-    
+
     /* Spacing */
     --crm-radius: 12px;
     --crm-radius-sm: 8px;
     --crm-radius-lg: 16px;
-    
+
     /* Transitions */
     --crm-transition: all 0.3s cubic-bezier(0.4, 0, 0.2, 1);
 }
@@ -67,7 +67,12 @@ body.bg-dark .crm-main {
 }
 
 /* --- Typography --- */
-h1, h2, h3, h4, h5, h6 {
+h1,
+h2,
+h3,
+h4,
+h5,
+h6 {
     font-weight: 600;
     letter-spacing: -0.02em;
     margin-bottom: 1rem;
@@ -653,6 +658,7 @@ body.bg-dark .nav-tabs .nav-link.active {
         opacity: 0;
         transform: translateY(20px);
     }
+
     to {
         opacity: 1;
         transform: translateY(0);
@@ -723,6 +729,7 @@ body.bg-dark .nav-tabs .nav-link.active {
     from {
         opacity: 0;
     }
+
     to {
         opacity: 1;
     }

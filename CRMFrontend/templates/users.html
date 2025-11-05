@@ -12,20 +12,36 @@
   {% endif %}
 </div>
 
+<div class="d-flex align-items-center gap-2 mb-3">
+  <input type="search" id="searchInput" class="form-control" placeholder="Search users..." style="max-width: 320px;">
+  <select id="roleFilter" class="form-select" style="max-width: 220px;">
+    <option value="">All roles</option>
+    <option value="SUPERADMIN">Super Admin</option>
+    <option value="ADMIN">Admin</option>
+    <option value="EMPLOYEE">Employee</option>
+  </select>
+  <button class="btn btn-outline-secondary" id="clearSearchBtn">Clear</button>
+  <div class="ms-auto d-flex align-items-center gap-2">
+    <button class="btn btn-outline-secondary btn-sm" id="prevPage">Prev</button>
+    <span id="pageInfo" class="small text-muted"></span>
+    <button class="btn btn-outline-secondary btn-sm" id="nextPage">Next</button>
+  </div>
+</div>
+
 <div class="card">
   <div class="card-body p-0">
     <div class="table-responsive">
       <table class="table table-hover mb-0 align-middle" id="userTable">
-    <thead>
-      <tr>
-        <th>Name</th>
-        <th>Email</th>
-        <th>Role</th>
-        <th>Status</th>
-        <th class="text-end">Actions</th>
-      </tr>
-    </thead>
-    <tbody>    </tbody>
+        <thead>
+          <tr>
+            <th>Name</th>
+            <th>Email</th>
+            <th>Role</th>
+            <th>Status</th>
+            <th class="text-end">Actions</th>
+          </tr>
+        </thead>
+        <tbody> </tbody>
       </table>
     </div>
   </div>
@@ -37,12 +53,7 @@
     <div class="modal-content">
       <div class="modal-header">
         <h5 class="modal-title" id="userModalTitle">Create User</h5>
-        <button
-          type="button"
-          class="btn-close"
-          data-bs-dismiss="modal"
-          aria-label="Close"
-        ></button>
+        <button type="button" class="btn-close" data-bs-dismiss="modal" aria-label="Close"></button>
       </div>
       <div class="modal-body">
         <form id="userForm">
@@ -62,12 +73,8 @@
             <input type="email" id="email" class="form-control" required />
           </div>
           <div class="mb-3">
-            <label class="form-label"
-              >Password
-              <small class="text-muted"
-                >(leave empty to keep current)</small
-              ></label
-            >
+            <label class="form-label">Password
+              <small class="text-muted">(leave empty to keep current)</small></label>
             <input type="password" id="password" class="form-control" />
           </div>
           <div class="mb-3">
@@ -79,12 +86,7 @@
             </select>
           </div>
           <div class="form-check mb-2">
-            <input
-              class="form-check-input"
-              type="checkbox"
-              id="is_active"
-              checked
-            />
+            <input class="form-check-input" type="checkbox" id="is_active" checked />
             <label class="form-check-label" for="is_active">Active</label>
           </div>
         </form>
@@ -119,21 +121,31 @@
     const modalEl = document.getElementById("userModal");
     const userModal = new bootstrap.Modal(modalEl);
 
+    let currentPage = 1;
+    let lastQuery = "";
+    let roleFilter = "";
+
     async function loadUsers() {
-      const res = await fetch(apiBase, {
+      const res = await fetch(`${apiBase}?page=${currentPage}${lastQuery ? `&q=${encodeURIComponent(lastQuery)}` : ''}${roleFilter ? `&role=${encodeURIComponent(roleFilter)}` : ''}`, {
         headers: { Authorization: "Bearer " + token() },
       });
       if (!res.ok) return console.error("Failed to load users", res.status);
-      const data = await res.json();
+      const raw = await res.json();
+      const data = Array.isArray(raw) ? raw : (raw.results || []);
+      const total = Array.isArray(raw) ? data.length : (raw.count || data.length);
+      const pageSize = Array.isArray(raw) ? data.length : (raw.results ? raw.results.length : data.length);
+      const totalPages = pageSize ? Math.ceil(total / pageSize) : 1;
+      document.getElementById("pageInfo").textContent = `Page ${currentPage} of ${totalPages}`;
+      document.getElementById("prevPage").disabled = currentPage <= 1;
+      document.getElementById("nextPage").disabled = currentPage >= totalPages;
       const tbody = document.querySelector("#userTable tbody");
       tbody.innerHTML = data
         .map(
           (u) => `
                     <tr data-id="${u.id}">
-                        <td>${
-                          (u.first_name || "") +
-                            (u.last_name ? " " + u.last_name : "") || "-"
-                        }</td>
+                        <td>${(u.first_name || "") +
+            (u.last_name ? " " + u.last_name : "") || "-"
+            }</td>
                         <td>${u.email || "-"}</td>
                         <td>${u.role || "-"}</td>
                         <td>${u.is_active ? "Active" : "Inactive"}</td>
@@ -160,6 +172,35 @@
         .querySelectorAll(".delete-btn")
         .forEach((b) => b.addEventListener("click", onDelete));
     }
+
+    // Search & filters
+    const searchInput = document.getElementById("searchInput");
+    const roleSel = document.getElementById("roleFilter");
+    const clearSearchBtn = document.getElementById("clearSearchBtn");
+    let searchTimer;
+    searchInput.addEventListener("input", () => {
+      clearTimeout(searchTimer);
+      searchTimer = setTimeout(() => {
+        lastQuery = searchInput.value.trim();
+        currentPage = 1;
+        loadUsers();
+      }, 300);
+    });
+    roleSel.addEventListener("change", () => {
+      roleFilter = roleSel.value || "";
+      currentPage = 1;
+      loadUsers();
+    });
+    clearSearchBtn.addEventListener("click", () => {
+      searchInput.value = "";
+      lastQuery = "";
+      roleSel.value = "";
+      roleFilter = "";
+      currentPage = 1;
+      loadUsers();
+    });
+    document.getElementById("prevPage").addEventListener("click", () => { if (currentPage > 1) { currentPage -= 1; loadUsers(); } });
+    document.getElementById("nextPage").addEventListener("click", () => { currentPage += 1; loadUsers(); });
 
     async function onView(e) {
       const row = e.target.closest("tr");

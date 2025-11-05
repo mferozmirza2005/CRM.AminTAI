@@ -10,20 +10,41 @@
   </button>
 </div>
 
+<div class="d-flex align-items-center gap-2 mb-3">
+  <input type="search" id="searchInput" class="form-control" placeholder="Search leads..." style="max-width: 320px;">
+  <select id="statusFilter" class="form-select" style="max-width: 220px;">
+    <option value="">All statuses</option>
+    <option value="NEW">New</option>
+    <option value="CONTACTED">Contacted</option>
+    <option value="QUALIFIED">Qualified</option>
+    <option value="CONVERTED">Converted</option>
+    <option value="LOST">Lost</option>
+  </select>
+  <select id="ownerFilter" class="form-select" style="max-width: 220px;">
+    <option value="">All owners</option>
+  </select>
+  <button class="btn btn-outline-secondary" id="clearSearchBtn">Clear</button>
+  <div class="ms-auto d-flex align-items-center gap-2">
+    <button class="btn btn-outline-secondary btn-sm" id="prevPage">Prev</button>
+    <span id="pageInfo" class="small text-muted"></span>
+    <button class="btn btn-outline-secondary btn-sm" id="nextPage">Next</button>
+  </div>
+</div>
+
 <div class="card">
   <div class="card-body p-0">
     <div class="table-responsive">
       <table class="table table-hover mb-0" id="dataTable">
-    <thead>
-      <tr>
-        <th>Title</th>
-        <th>Status</th>
-        <th>Owner</th>
-        <th>Created</th>
-        <th class="text-end">Actions</th>
-      </tr>
-    </thead>
-    <tbody>    </tbody>
+        <thead>
+          <tr>
+            <th>Title</th>
+            <th>Status</th>
+            <th>Owner</th>
+            <th>Created</th>
+            <th class="text-end">Actions</th>
+          </tr>
+        </thead>
+        <tbody> </tbody>
       </table>
     </div>
   </div>
@@ -35,12 +56,7 @@
     <div class="modal-content">
       <div class="modal-header">
         <h5 class="modal-title" id="modalTitle">Create Lead</h5>
-        <button
-          type="button"
-          class="btn-close"
-          data-bs-dismiss="modal"
-          aria-label="Close"
-        ></button>
+        <button type="button" class="btn-close" data-bs-dismiss="modal" aria-label="Close"></button>
       </div>
       <div class="modal-body">
         <form id="itemForm">
@@ -111,11 +127,15 @@
     const token = () => localStorage.getItem("access");
     const modalEl = document.getElementById("itemModal");
     const modal = new bootstrap.Modal(modalEl);
+    let currentPage = 1;
+    let lastQuery = "";
+    let statusFilter = "";
+    let ownerFilter = "";
 
     async function load() {
       try {
         const [rLeads, rUsers, rCampaigns, rAccounts, rContacts] = await Promise.all([
-          fetch(base, { headers: { Authorization: "Bearer " + token() } }),
+          fetch(`${base}?page=${currentPage}${lastQuery ? `&q=${encodeURIComponent(lastQuery)}` : ''}${statusFilter ? `&status=${encodeURIComponent(statusFilter)}` : ''}${ownerFilter ? `&owner=${encodeURIComponent(ownerFilter)}` : ''}`, { headers: { Authorization: "Bearer " + token() } }),
           fetch("/api/users/", { headers: { Authorization: "Bearer " + token() } }),
           fetch("/api/campaigns/", { headers: { Authorization: "Bearer " + token() } }),
           fetch("/api/accounts/", { headers: { Authorization: "Bearer " + token() } }),
@@ -126,37 +146,59 @@
         // build lookups and populate selects
         let users = [];
         if (rUsers.ok) {
-          users = await rUsers.json();
+          const usersRaw = await rUsers.json();
+          users = Array.isArray(usersRaw) ? usersRaw : (usersRaw.results || []);
           const ownerSelect = document.getElementById("owner");
           ownerSelect.innerHTML = '<option value="">— None —</option>';
           users.forEach((u) => ownerSelect.appendChild(new Option(((u.first_name || "") + (u.last_name ? " " + u.last_name : "")).trim() + " <" + u.email + ">", u.id)));
+          // populate owner filter
+          const ownerFilterSel = document.getElementById("ownerFilter");
+          if (ownerFilterSel) {
+            const prevVal = ownerFilterSel.value;
+            ownerFilterSel.innerHTML = '<option value="">All owners</option>';
+            users.forEach((u) => ownerFilterSel.appendChild(new Option(((u.first_name || "") + (u.last_name ? " " + u.last_name : "")).trim() || u.email || '-', u.id)));
+            if (prevVal) ownerFilterSel.value = prevVal;
+          }
         }
 
         let camps = [];
         if (rCampaigns.ok) {
-          camps = await rCampaigns.json();
+          const campsRaw = await rCampaigns.json();
+          camps = Array.isArray(campsRaw) ? campsRaw : (campsRaw.results || []);
           const campSel = document.getElementById("campaign");
+          campSel.innerHTML = '<option value="">— None —</option>';
           campSel.innerHTML = '<option value="">— None —</option>';
           camps.forEach((c) => campSel.appendChild(new Option(c.name, c.id)));
         }
 
         let accs = [];
         if (rAccounts.ok) {
-          accs = await rAccounts.json();
+          const accsRaw = await rAccounts.json();
+          accs = Array.isArray(accsRaw) ? accsRaw : (accsRaw.results || []);
           const accSel = document.getElementById("account");
+          accSel.innerHTML = '<option value="">— None —</option>';
           accSel.innerHTML = '<option value="">— None —</option>';
           accs.forEach((a) => accSel.appendChild(new Option(a.name, a.id)));
         }
 
         let contacts = [];
         if (rContacts.ok) {
-          contacts = await rContacts.json();
+          const contactsRaw = await rContacts.json();
+          contacts = Array.isArray(contactsRaw) ? contactsRaw : (contactsRaw.results || []);
           const contactSel = document.getElementById("contact");
+          contactSel.innerHTML = '<option value="">— None —</option>';
           contactSel.innerHTML = '<option value="">— None —</option>';
           contacts.forEach((c) => contactSel.appendChild(new Option(((c.first_name || "") + (c.last_name ? " " + c.last_name : "")).trim(), c.id)));
         }
 
-        const data = await rLeads.json();
+        const raw = await rLeads.json();
+        const data = Array.isArray(raw) ? raw : (raw.results || []);
+        const total = Array.isArray(raw) ? data.length : (raw.count || data.length);
+        const pageSize = Array.isArray(raw) ? data.length : (raw.results ? raw.results.length : data.length);
+        const totalPages = pageSize ? Math.ceil(total / pageSize) : 1;
+        document.getElementById("pageInfo").textContent = `Page ${currentPage} of ${totalPages}`;
+        document.getElementById("prevPage").disabled = currentPage <= 1;
+        document.getElementById("nextPage").disabled = currentPage >= totalPages;
         const tbody = document.querySelector("#dataTable tbody");
         tbody.innerHTML = data
           .map((i) => {
@@ -196,6 +238,43 @@
       }
     }
 
+    // Search & filters
+    const searchInput = document.getElementById("searchInput");
+    const statusSel = document.getElementById("statusFilter");
+    const ownerSel = document.getElementById("ownerFilter");
+    const clearSearchBtn = document.getElementById("clearSearchBtn");
+    let searchTimer;
+    searchInput.addEventListener("input", () => {
+      clearTimeout(searchTimer);
+      searchTimer = setTimeout(() => {
+        lastQuery = searchInput.value.trim();
+        currentPage = 1;
+        load();
+      }, 300);
+    });
+    statusSel.addEventListener("change", () => {
+      statusFilter = statusSel.value || "";
+      currentPage = 1;
+      load();
+    });
+    ownerSel.addEventListener("change", () => {
+      ownerFilter = ownerSel.value || "";
+      currentPage = 1;
+      load();
+    });
+    clearSearchBtn.addEventListener("click", () => {
+      searchInput.value = "";
+      lastQuery = "";
+      statusSel.value = "";
+      ownerSel.value = "";
+      statusFilter = "";
+      ownerFilter = "";
+      currentPage = 1;
+      load();
+    });
+    document.getElementById("prevPage").addEventListener("click", () => { if (currentPage > 1) { currentPage -= 1; load(); } });
+    document.getElementById("nextPage").addEventListener("click", () => { currentPage += 1; load(); });
+
     function openCreate() {
       document.getElementById("modalTitle").textContent = "Create Lead";
       document.getElementById("itemForm").reset();
@@ -214,10 +293,10 @@
       document.getElementById("title").value = it.title || "";
       document.getElementById("description").value = it.description || "";
       document.getElementById("status").value = it.status || "";
-      document.getElementById("owner").value = it.owner ? (typeof it.owner === 'object' ? it.owner.id : it.owner) : (it.owner_id || "");
-      document.getElementById("campaign").value = it.campaign ? (typeof it.campaign === 'object' ? it.campaign.id : it.campaign) : (it.campaign_id || "");
-      document.getElementById("account").value = it.account ? (typeof it.account === 'object' ? it.account.id : it.account) : (it.account_id || "");
-      document.getElementById("contact").value = it.contact ? (typeof it.contact === 'object' ? it.contact.id : it.contact) : (it.contact_id || "");
+      document.getElementById("owner").value = it.owner ? String(typeof it.owner === 'object' ? it.owner.id : it.owner) : String(it.owner_id || "");
+      document.getElementById("campaign").value = it.campaign ? String(typeof it.campaign === 'object' ? it.campaign.id : it.campaign) : String(it.campaign_id || "");
+      document.getElementById("account").value = it.account ? String(typeof it.account === 'object' ? it.account.id : it.account) : String(it.account_id || "");
+      document.getElementById("contact").value = it.contact ? String(typeof it.contact === 'object' ? it.contact.id : it.contact) : String(it.contact_id || "");
       Array.from(
         document.querySelectorAll(
           "#itemForm input, #itemForm textarea, #itemForm select"
@@ -239,10 +318,10 @@
       document.getElementById("title").value = it.title || "";
       document.getElementById("description").value = it.description || "";
       document.getElementById("status").value = it.status || "";
-      document.getElementById("owner").value = it.owner ? (typeof it.owner === 'object' ? it.owner.id : it.owner) : (it.owner_id || "");
-      document.getElementById("campaign").value = it.campaign ? (typeof it.campaign === 'object' ? it.campaign.id : it.campaign) : (it.campaign_id || "");
-      document.getElementById("account").value = it.account ? (typeof it.account === 'object' ? it.account.id : it.account) : (it.account_id || "");
-      document.getElementById("contact").value = it.contact ? (typeof it.contact === 'object' ? it.contact.id : it.contact) : (it.contact_id || "");
+      document.getElementById("owner").value = it.owner ? String(typeof it.owner === 'object' ? it.owner.id : it.owner) : String(it.owner_id || "");
+      document.getElementById("campaign").value = it.campaign ? String(typeof it.campaign === 'object' ? it.campaign.id : it.campaign) : String(it.campaign_id || "");
+      document.getElementById("account").value = it.account ? String(typeof it.account === 'object' ? it.account.id : it.account) : String(it.account_id || "");
+      document.getElementById("contact").value = it.contact ? String(typeof it.contact === 'object' ? it.contact.id : it.contact) : String(it.contact_id || "");
       Array.from(
         document.querySelectorAll(
           "#itemForm input, #itemForm textarea, #itemForm select"

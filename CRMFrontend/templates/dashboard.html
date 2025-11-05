@@ -12,6 +12,13 @@
     </div>
 </div>
 
+<div class="d-flex align-items-center gap-2 mb-3">
+    <input type="search" id="dashboardFilter" class="form-control" placeholder="Search dashboard tables..."
+        style="max-width: 360px;">
+    <button class="btn btn-outline-secondary" id="clearDashboardFilter">Clear</button>
+    <div class="ms-auto small text-muted">Use search to filter table rows</div>
+</div>
+
 <div id="dashboardStats" class="fade-in">
     <div class="row g-4 mb-4">
         <div class="col-12 text-center py-5">
@@ -118,11 +125,11 @@
 
 <script>
     // Display current date
-    document.getElementById('currentDate').textContent = new Date().toLocaleDateString('en-US', { 
-        weekday: 'long', 
-        year: 'numeric', 
-        month: 'long', 
-        day: 'numeric' 
+    document.getElementById('currentDate').textContent = new Date().toLocaleDateString('en-US', {
+        weekday: 'long',
+        year: 'numeric',
+        month: 'long',
+        day: 'numeric'
     });
 </script>
 {% endblock %}

@@ -10,21 +10,39 @@
   </button>
 </div>
 
+<div class="d-flex align-items-center gap-2 mb-3">
+  <input type="search" id="searchInput" class="form-control" placeholder="Search tasks..." style="max-width: 320px;">
+  <select id="completedFilter" class="form-select" style="max-width: 200px;">
+    <option value="">All</option>
+    <option value="true">Completed</option>
+    <option value="false">Pending</option>
+  </select>
+  <select id="assigneeFilter" class="form-select" style="max-width: 220px;">
+    <option value="">All assignees</option>
+  </select>
+  <button class="btn btn-outline-secondary" id="clearSearchBtn">Clear</button>
+  <div class="ms-auto d-flex align-items-center gap-2">
+    <button class="btn btn-outline-secondary btn-sm" id="prevPage">Prev</button>
+    <span id="pageInfo" class="small text-muted"></span>
+    <button class="btn btn-outline-secondary btn-sm" id="nextPage">Next</button>
+  </div>
+</div>
+
 <div class="card">
   <div class="card-body p-0">
     <div class="table-responsive">
       <table class="table table-hover mb-0" id="dataTable">
-    <thead>
-      <tr>
-        <th>Title</th>
-        <th>Assigned</th>
-        <th>Due</th>
-        <th>Completed</th>
-        <th>Created</th>
-        <th class="text-end">Actions</th>
-      </tr>
-    </thead>
-    <tbody>    </tbody>
+        <thead>
+          <tr>
+            <th>Title</th>
+            <th>Assigned</th>
+            <th>Due</th>
+            <th>Completed</th>
+            <th>Created</th>
+            <th class="text-end">Actions</th>
+          </tr>
+        </thead>
+        <tbody> </tbody>
       </table>
     </div>
   </div>
@@ -36,12 +54,7 @@
     <div class="modal-content">
       <div class="modal-header">
         <h5 class="modal-title" id="modalTitle">Create Task</h5>
-        <button
-          type="button"
-          class="btn-close"
-          data-bs-dismiss="modal"
-          aria-label="Close"
-        ></button>
+        <button type="button" class="btn-close" data-bs-dismiss="modal" aria-label="Close"></button>
       </div>
       <div class="modal-body">
         <form id="itemForm">
@@ -118,12 +131,16 @@
     const token = () => localStorage.getItem("access");
     const modalEl = document.getElementById("itemModal");
     const modal = new bootstrap.Modal(modalEl);
+    let currentPage = 1;
+    let lastQuery = "";
+    let completedFilter = "";
+    let assigneeFilter = "";
 
     async function load() {
       try {
         const [rTasks, rUsers, rLeads, rDeals, rCampaigns, rAccounts] =
           await Promise.all([
-            fetch(base, { headers: { Authorization: "Bearer " + token() } }),
+            fetch(`${base}?page=${currentPage}${lastQuery ? `&q=${encodeURIComponent(lastQuery)}` : ''}${completedFilter ? `&completed=${encodeURIComponent(completedFilter)}` : ''}${assigneeFilter ? `&assigned_to=${encodeURIComponent(assigneeFilter)}` : ''}`, { headers: { Authorization: "Bearer " + token() } }),
             fetch("/api/users/", {
               headers: { Authorization: "Bearer " + token() },
             }),
@@ -146,44 +163,68 @@
         // Store users for lookup when rendering table
         let users = [];
         if (rUsers.ok) {
-          users = await rUsers.json();
+          const usersRaw = await rUsers.json();
+          users = Array.isArray(usersRaw) ? usersRaw : (usersRaw.results || []);
           const sel = document.getElementById("assigned_to");
+          sel.innerHTML = '<option value="">— None —</option>';
+          const assigneeFilterSel = document.getElementById("assigneeFilter");
+          // reset filter options keeping default and restore previous selection
+          if (assigneeFilterSel) {
+            const prevVal = assigneeFilterSel.value;
+            assigneeFilterSel.innerHTML = '<option value="">All assignees</option>';
+            // append options after resetting
+            users.forEach((u) => {
+              assigneeFilterSel.appendChild(new Option(((u.first_name || "") + (u.last_name ? " " + u.last_name : "")).trim() || u.email || '-', u.id));
+            });
+            if (prevVal) assigneeFilterSel.value = prevVal;
+          }
           users.forEach((u) =>
             sel.appendChild(
               new Option(
                 (
                   (u.first_name || "") + (u.last_name ? " " + u.last_name : "")
                 ).trim() +
-                  " <" +
-                  u.email +
-                  ">",
+                " <" +
+                u.email +
+                ">",
                 u.id
               )
             )
           );
         }
         if (rLeads.ok) {
-          const leads = await rLeads.json();
+          const leadsRaw = await rLeads.json();
+          const leads = Array.isArray(leadsRaw) ? leadsRaw : (leadsRaw.results || []);
           const sel = document.getElementById("related_lead");
           leads.forEach((l) => sel.appendChild(new Option(l.title, l.id)));
         }
         if (rDeals.ok) {
-          const deals = await rDeals.json();
+          const dealsRaw = await rDeals.json();
+          const deals = Array.isArray(dealsRaw) ? dealsRaw : (dealsRaw.results || []);
           const sel = document.getElementById("related_deal");
           deals.forEach((d) => sel.appendChild(new Option(d.title, d.id)));
         }
         if (rCampaigns.ok) {
-          const camps = await rCampaigns.json();
+          const campsRaw = await rCampaigns.json();
+          const camps = Array.isArray(campsRaw) ? campsRaw : (campsRaw.results || []);
           const sel = document.getElementById("related_campaign");
           camps.forEach((c) => sel.appendChild(new Option(c.name, c.id)));
         }
         if (rAccounts.ok) {
-          const accs = await rAccounts.json();
+          const accsRaw = await rAccounts.json();
+          const accs = Array.isArray(accsRaw) ? accsRaw : (accsRaw.results || []);
           const sel = document.getElementById("related_account");
           accs.forEach((a) => sel.appendChild(new Option(a.name, a.id)));
         }
 
-        const data = await rTasks.json();
+        const raw = await rTasks.json();
+        const data = Array.isArray(raw) ? raw : (raw.results || []);
+        const total = Array.isArray(raw) ? data.length : (raw.count || data.length);
+        const pageSize = Array.isArray(raw) ? data.length : (raw.results ? raw.results.length : data.length);
+        const totalPages = pageSize ? Math.ceil(total / pageSize) : 1;
+        document.getElementById("pageInfo").textContent = `Page ${currentPage} of ${totalPages}`;
+        document.getElementById("prevPage").disabled = currentPage <= 1;
+        document.getElementById("nextPage").disabled = currentPage >= totalPages;
         const tbody = document.querySelector("#dataTable tbody");
         tbody.innerHTML = data
           .map((i) => {
@@ -191,7 +232,7 @@
             let assignedDisplay = "-";
             if (i.assigned_to) {
               // Owner may be an object or an ID
-              const assignedObj = typeof i.assigned_to === 'object' ? i.assigned_to : 
+              const assignedObj = typeof i.assigned_to === 'object' ? i.assigned_to :
                 (users.length > 0 ? users.find((u) => u.id === Number(i.assigned_to)) : null);
               if (assignedObj) {
                 assignedDisplay = ((assignedObj.first_name || "") + (assignedObj.last_name ? " " + assignedObj.last_name : "")).trim() || assignedObj.email || "-";
@@ -207,11 +248,10 @@
                     <tr data-id="${i.id}">
                         <td>${i.title}</td>
                         <td>${assignedDisplay}</td>
-                        <td>${
-                          i.due_date
-                            ? new Date(i.due_date).toLocaleDateString()
-                            : "-"
-                        }</td>
+                        <td>${i.due_date
+                ? new Date(i.due_date).toLocaleDateString()
+                : "-"
+              }</td>
                         <td>${i.completed ? "✅" : "❌"}</td>
                         <td>${new Date(i.created_at).toLocaleDateString()}</td>
                         <td class="text-end">
@@ -240,6 +280,43 @@
       }
     }
 
+    // Search & filters
+    const searchInput = document.getElementById("searchInput");
+    const completedSel = document.getElementById("completedFilter");
+    const assigneeSel = document.getElementById("assigneeFilter");
+    const clearSearchBtn = document.getElementById("clearSearchBtn");
+    let searchTimer;
+    searchInput.addEventListener("input", () => {
+      clearTimeout(searchTimer);
+      searchTimer = setTimeout(() => {
+        lastQuery = searchInput.value.trim();
+        currentPage = 1;
+        load();
+      }, 300);
+    });
+    completedSel.addEventListener("change", () => {
+      completedFilter = completedSel.value || "";
+      currentPage = 1;
+      load();
+    });
+    assigneeSel.addEventListener("change", () => {
+      assigneeFilter = assigneeSel.value || "";
+      currentPage = 1;
+      load();
+    });
+    clearSearchBtn.addEventListener("click", () => {
+      searchInput.value = "";
+      lastQuery = "";
+      completedSel.value = "";
+      assigneeSel.value = "";
+      completedFilter = "";
+      assigneeFilter = "";
+      currentPage = 1;
+      load();
+    });
+    document.getElementById("prevPage").addEventListener("click", () => { if (currentPage > 1) { currentPage -= 1; load(); } });
+    document.getElementById("nextPage").addEventListener("click", () => { currentPage += 1; load(); });
+
     function openCreate() {
       document.getElementById("modalTitle").textContent = "Create Task";
       document.getElementById("itemForm").reset();
@@ -257,23 +334,13 @@
       document.getElementById("modalTitle").textContent = "View Task";
       document.getElementById("title").value = it.title || "";
       document.getElementById("description").value = it.description || "";
-      document.getElementById("assigned_to").value = it.assigned_to
-        ? it.assigned_to.id
-        : "";
+      document.getElementById("assigned_to").value = it.assigned_to ? String(it.assigned_to.id) : "";
       document.getElementById("due_date").value = it.due_date || "";
       document.getElementById("completed").checked = !!it.completed;
-      document.getElementById("related_lead").value = it.related_lead
-        ? it.related_lead.id
-        : "";
-      document.getElementById("related_deal").value = it.related_deal
-        ? it.related_deal.id
-        : "";
-      document.getElementById("related_campaign").value = it.related_campaign
-        ? it.related_campaign.id
-        : "";
-      document.getElementById("related_account").value = it.related_account
-        ? it.related_account.id
-        : "";
+      document.getElementById("related_lead").value = it.related_lead ? String(it.related_lead.id) : "";
+      document.getElementById("related_deal").value = it.related_deal ? String(it.related_deal.id) : "";
+      document.getElementById("related_campaign").value = it.related_campaign ? String(it.related_campaign.id) : "";
+      document.getElementById("related_account").value = it.related_account ? String(it.related_account.id) : "";
       Array.from(
         document.querySelectorAll(
           "#itemForm input, #itemForm textarea, #itemForm select"
@@ -294,23 +361,13 @@
       document.getElementById("itemId").value = it.id;
       document.getElementById("title").value = it.title || "";
       document.getElementById("description").value = it.description || "";
-      document.getElementById("assigned_to").value = it.assigned_to
-        ? it.assigned_to.id
-        : "";
+      document.getElementById("assigned_to").value = it.assigned_to ? String(it.assigned_to.id) : "";
       document.getElementById("due_date").value = it.due_date || "";
       document.getElementById("completed").checked = !!it.completed;
-      document.getElementById("related_lead").value = it.related_lead
-        ? it.related_lead.id
-        : "";
-      document.getElementById("related_deal").value = it.related_deal
-        ? it.related_deal.id
-        : "";
-      document.getElementById("related_campaign").value = it.related_campaign
-        ? it.related_campaign.id
-        : "";
-      document.getElementById("related_account").value = it.related_account
-        ? it.related_account.id
-        : "";
+      document.getElementById("related_lead").value = it.related_lead ? String(it.related_lead.id) : "";
+      document.getElementById("related_deal").value = it.related_deal ? String(it.related_deal.id) : "";
+      document.getElementById("related_campaign").value = it.related_campaign ? String(it.related_campaign.id) : "";
+      document.getElementById("related_account").value = it.related_account ? String(it.related_account.id) : "";
       Array.from(
         document.querySelectorAll(
           "#itemForm input, #itemForm textarea, #itemForm select"

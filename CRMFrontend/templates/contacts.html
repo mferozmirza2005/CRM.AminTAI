@@ -10,21 +10,34 @@
   </button>
 </div>
 
+<div class="d-flex align-items-center gap-2 mb-3">
+  <input type="search" id="searchInput" class="form-control" placeholder="Search contacts..." style="max-width: 320px;">
+  <select id="accountFilter" class="form-select" style="max-width: 240px;">
+    <option value="">All accounts</option>
+  </select>
+  <button class="btn btn-outline-secondary" id="clearSearchBtn">Clear</button>
+  <div class="ms-auto d-flex align-items-center gap-2">
+    <button class="btn btn-outline-secondary btn-sm" id="prevPage">Prev</button>
+    <span id="pageInfo" class="small text-muted"></span>
+    <button class="btn btn-outline-secondary btn-sm" id="nextPage">Next</button>
+  </div>
+</div>
+
 <div class="card">
   <div class="card-body p-0">
     <div class="table-responsive">
       <table class="table table-hover mb-0" id="dataTable">
-    <thead>
-      <tr>
-        <th>Name</th>
-        <th>Account</th>
-        <th>Email</th>
-        <th>Phone</th>
-        <th>Created</th>
-        <th class="text-end">Actions</th>
-      </tr>
-    </thead>
-    <tbody>    </tbody>
+        <thead>
+          <tr>
+            <th>Name</th>
+            <th>Account</th>
+            <th>Email</th>
+            <th>Phone</th>
+            <th>Created</th>
+            <th class="text-end">Actions</th>
+          </tr>
+        </thead>
+        <tbody> </tbody>
       </table>
     </div>
   </div>
@@ -36,12 +49,7 @@
     <div class="modal-content">
       <div class="modal-header">
         <h5 class="modal-title" id="modalTitle">Create Contact</h5>
-        <button
-          type="button"
-          class="btn-close"
-          data-bs-dismiss="modal"
-          aria-label="Close"
-        ></button>
+        <button type="button" class="btn-close" data-bs-dismiss="modal" aria-label="Close"></button>
       </div>
       <div class="modal-body">
         <form id="itemForm">
@@ -49,12 +57,7 @@
           <div class="row">
             <div class="mb-3 col-6">
               <label class="form-label">First name</label>
-              <input
-                type="text"
-                id="first_name"
-                class="form-control"
-                required
-              />
+              <input type="text" id="first_name" class="form-control" required />
             </div>
             <div class="mb-3 col-6">
               <label class="form-label">Last name</label>
@@ -101,11 +104,14 @@
     const token = () => localStorage.getItem("access");
     const modalEl = document.getElementById("itemModal");
     const modal = new bootstrap.Modal(modalEl);
+    let currentPage = 1;
+    let lastQuery = "";
+    let accountFilter = "";
 
     async function load() {
       try {
         const [rContacts, rAccounts] = await Promise.all([
-          fetch(base, { headers: { Authorization: "Bearer " + token() } }),
+          fetch(`${base}?page=${currentPage}${lastQuery ? `&q=${encodeURIComponent(lastQuery)}` : ''}${accountFilter ? `&account=${encodeURIComponent(accountFilter)}` : ''}`, { headers: { Authorization: "Bearer " + token() } }),
           fetch("/api/accounts/", {
             headers: { Authorization: "Bearer " + token() },
           }),
@@ -115,7 +121,8 @@
         // build accounts lookup and populate select
         let accounts = [];
         if (rAccounts.ok) {
-          accounts = await rAccounts.json();
+          const accountsRaw = await rAccounts.json();
+          accounts = Array.isArray(accountsRaw) ? accountsRaw : (accountsRaw.results || []);
           const accountSelect = document.getElementById("account");
           accountSelect.innerHTML = '<option value="">— Select account —</option>';
           accounts.forEach((a) => {
@@ -124,9 +131,29 @@
             opt.textContent = a.name;
             accountSelect.appendChild(opt);
           });
+          // populate toolbar account filter
+          const accountFilterSel = document.getElementById("accountFilter");
+          if (accountFilterSel) {
+            const prevVal = accountFilterSel.value;
+            accountFilterSel.innerHTML = '<option value="">All accounts</option>';
+            accounts.forEach((a) => {
+              const opt = document.createElement("option");
+              opt.value = a.id;
+              opt.textContent = a.name;
+              accountFilterSel.appendChild(opt);
+            });
+            if (prevVal) accountFilterSel.value = prevVal;
+          }
         }
 
-        const data = await rContacts.json();
+        const raw = await rContacts.json();
+        const data = Array.isArray(raw) ? raw : (raw.results || []);
+        const total = Array.isArray(raw) ? data.length : (raw.count || data.length);
+        const pageSize = Array.isArray(raw) ? data.length : (raw.results ? raw.results.length : data.length);
+        const totalPages = pageSize ? Math.ceil(total / pageSize) : 1;
+        document.getElementById("pageInfo").textContent = `Page ${currentPage} of ${totalPages}`;
+        document.getElementById("prevPage").disabled = currentPage <= 1;
+        document.getElementById("nextPage").disabled = currentPage >= totalPages;
         const tbody = document.querySelector("#dataTable tbody");
         tbody.innerHTML = data
           .map((i) => {
@@ -168,6 +195,39 @@
       }
     }
 
+    // Search & filter controls
+    const searchInput = document.getElementById("searchInput");
+    const clearSearchBtn = document.getElementById("clearSearchBtn");
+    const accountSel = document.getElementById("accountFilter");
+    let searchTimer;
+    searchInput.addEventListener("input", () => {
+      clearTimeout(searchTimer);
+      searchTimer = setTimeout(() => {
+        lastQuery = searchInput.value.trim();
+        currentPage = 1;
+        load();
+      }, 300);
+    });
+    accountSel.addEventListener("change", () => {
+      accountFilter = accountSel.value || "";
+      currentPage = 1;
+      load();
+    });
+    clearSearchBtn.addEventListener("click", () => {
+      searchInput.value = "";
+      lastQuery = "";
+      accountSel.value = "";
+      accountFilter = "";
+      currentPage = 1;
+      load();
+    });
+    document.getElementById("prevPage").addEventListener("click", () => {
+      if (currentPage > 1) { currentPage -= 1; load(); }
+    });
+    document.getElementById("nextPage").addEventListener("click", () => {
+      currentPage += 1; load();
+    });
+
     function openCreate() {
       document.getElementById("modalTitle").textContent = "Create Contact";
       document.getElementById("itemForm").reset();
@@ -183,7 +243,7 @@
       document.getElementById("modalTitle").textContent = "View Contact";
       document.getElementById("first_name").value = it.first_name || "";
       document.getElementById("last_name").value = it.last_name || "";
-      document.getElementById("account").value = it.account ? (typeof it.account === 'object' ? it.account.id : it.account) : (it.account_id || "");
+      document.getElementById("account").value = it.account ? String(typeof it.account === 'object' ? it.account.id : it.account) : String(it.account_id || "");
       document.getElementById("email").value = it.email || "";
       document.getElementById("phone").value = it.phone || "";
       document.getElementById("position").value = it.position || "";
@@ -201,7 +261,7 @@
       document.getElementById("itemId").value = it.id;
       document.getElementById("first_name").value = it.first_name || "";
       document.getElementById("last_name").value = it.last_name || "";
-      document.getElementById("account").value = it.account ? (typeof it.account === 'object' ? it.account.id : it.account) : (it.account_id || "");
+      document.getElementById("account").value = it.account ? String(typeof it.account === 'object' ? it.account.id : it.account) : String(it.account_id || "");
       document.getElementById("email").value = it.email || "";
       document.getElementById("phone").value = it.phone || "";
       document.getElementById("position").value = it.position || "";

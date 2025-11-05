@@ -10,20 +10,31 @@
   </button>
 </div>
 
+<div class="d-flex align-items-center gap-2 mb-3">
+  <input type="search" id="searchInput" class="form-control" placeholder="Search campaigns..."
+    style="max-width: 320px;">
+  <button class="btn btn-outline-secondary" id="clearSearchBtn">Clear</button>
+  <div class="ms-auto d-flex align-items-center gap-2">
+    <button class="btn btn-outline-secondary btn-sm" id="prevPage">Prev</button>
+    <span id="pageInfo" class="small text-muted"></span>
+    <button class="btn btn-outline-secondary btn-sm" id="nextPage">Next</button>
+  </div>
+</div>
+
 <div class="card">
   <div class="card-body p-0">
     <div class="table-responsive">
       <table class="table table-hover mb-0" id="dataTable">
-    <thead>
-      <tr>
-        <th>Name</th>
-        <th>Budget</th>
-        <th>Owner</th>
-        <th>Created</th>
-        <th class="text-end">Actions</th>
-      </tr>
-    </thead>
-    <tbody>    </tbody>
+        <thead>
+          <tr>
+            <th>Name</th>
+            <th>Budget</th>
+            <th>Owner</th>
+            <th>Created</th>
+            <th class="text-end">Actions</th>
+          </tr>
+        </thead>
+        <tbody> </tbody>
       </table>
     </div>
   </div>
@@ -35,12 +46,7 @@
     <div class="modal-content">
       <div class="modal-header">
         <h5 class="modal-title" id="modalTitle">Create Campaign</h5>
-        <button
-          type="button"
-          class="btn-close"
-          data-bs-dismiss="modal"
-          aria-label="Close"
-        ></button>
+        <button type="button" class="btn-close" data-bs-dismiss="modal" aria-label="Close"></button>
       </div>
       <div class="modal-body">
         <form id="itemForm">
@@ -62,13 +68,7 @@
             </div>
             <div class="mb-3 col-6">
               <label class="form-label">Budget</label>
-              <input
-                type="number"
-                id="budget"
-                class="form-control"
-                step="0.01"
-                min="0"
-              />
+              <input type="number" id="budget" class="form-control" step="0.01" min="0" />
             </div>
           </div>
           <div class="mb-3">
@@ -105,12 +105,14 @@
     const token = () => localStorage.getItem("access");
     const modalEl = document.getElementById("itemModal");
     const modal = new bootstrap.Modal(modalEl);
+    let currentPage = 1;
+    let lastQuery = "";
 
     async function load() {
       // load campaigns and reference lists (users, accounts)
       try {
         const [rCamp, rUsers, rAccounts] = await Promise.all([
-          fetch(base, { headers: { Authorization: "Bearer " + token() } }),
+          fetch(`${base}?page=${currentPage}${lastQuery ? `&q=${encodeURIComponent(lastQuery)}` : ''}`, { headers: { Authorization: "Bearer " + token() } }),
           fetch("/api/users/", {
             headers: { Authorization: "Bearer " + token() },
           }),
@@ -124,8 +126,10 @@
         // Store users for lookup when rendering table
         let users = [];
         if (rUsers.ok) {
-          users = await rUsers.json();
+          const usersRaw = await rUsers.json();
+          users = Array.isArray(usersRaw) ? usersRaw : (usersRaw.results || []);
           const ownerSelect = document.getElementById("owner");
+          ownerSelect.innerHTML = '<option value="">— None —</option>';
           users.forEach((u) => {
             const opt = document.createElement("option");
             opt.value = u.id;
@@ -140,8 +144,10 @@
           });
         }
         if (rAccounts.ok) {
-          const accounts = await rAccounts.json();
+          const accountsRaw = await rAccounts.json();
+          const accounts = Array.isArray(accountsRaw) ? accountsRaw : (accountsRaw.results || []);
           const accountsSelect = document.getElementById("accounts");
+          accountsSelect.innerHTML = '';
           accounts.forEach((a) => {
             const opt = document.createElement("option");
             opt.value = a.id;
@@ -150,7 +156,14 @@
           });
         }
 
-        const data = await rCamp.json();
+        const raw = await rCamp.json();
+        const data = Array.isArray(raw) ? raw : (raw.results || []);
+        const total = Array.isArray(raw) ? data.length : (raw.count || data.length);
+        const pageSize = Array.isArray(raw) ? data.length : (raw.results ? raw.results.length : data.length);
+        const totalPages = pageSize ? Math.ceil(total / pageSize) : 1;
+        document.getElementById("pageInfo").textContent = `Page ${currentPage} of ${totalPages}`;
+        document.getElementById("prevPage").disabled = currentPage <= 1;
+        document.getElementById("nextPage").disabled = currentPage >= totalPages;
         const tbody = document.querySelector("#dataTable tbody");
         tbody.innerHTML = data
           .map((i) => {
@@ -158,7 +171,7 @@
             let ownerDisplay = "-";
             if (i.owner) {
               // Owner may be an object or an ID
-              const ownerObj = typeof i.owner === 'object' ? i.owner : 
+              const ownerObj = typeof i.owner === 'object' ? i.owner :
                 (users.length > 0 ? users.find((u) => u.id === Number(i.owner)) : null);
               if (ownerObj) {
                 ownerDisplay = ((ownerObj.first_name || "") + (ownerObj.last_name ? " " + ownerObj.last_name : "")).trim() + " <" + (ownerObj.email || "") + ">";
@@ -202,6 +215,31 @@
       }
     }
 
+    // Search & pagination controls
+    const searchInput = document.getElementById("searchInput");
+    const clearSearchBtn = document.getElementById("clearSearchBtn");
+    let searchTimer;
+    searchInput.addEventListener("input", () => {
+      clearTimeout(searchTimer);
+      searchTimer = setTimeout(() => {
+        lastQuery = searchInput.value.trim();
+        currentPage = 1;
+        load();
+      }, 300);
+    });
+    clearSearchBtn.addEventListener("click", () => {
+      searchInput.value = "";
+      lastQuery = "";
+      currentPage = 1;
+      load();
+    });
+    document.getElementById("prevPage").addEventListener("click", () => {
+      if (currentPage > 1) { currentPage -= 1; load(); }
+    });
+    document.getElementById("nextPage").addEventListener("click", () => {
+      currentPage += 1; load();
+    });
+
     function openCreate() {
       document.getElementById("modalTitle").textContent = "Create Campaign";
       document.getElementById("itemForm").reset();
@@ -221,7 +259,7 @@
       document.getElementById("description").value = it.description || "";
       document.getElementById("budget").value = it.budget || "";
       // owner may be object or id
-      document.getElementById("owner").value = it.owner ? (typeof it.owner === 'object' ? it.owner.id : it.owner) : (it.owner_id || "");
+      document.getElementById("owner").value = it.owner ? String(typeof it.owner === 'object' ? it.owner.id : it.owner) : String(it.owner_id || "");
       // mark accounts (it.accounts may be array of ids or array of objects)
       const accountIds = (it.accounts || []).map((a) => (typeof a === 'object' ? a.id : a));
       Array.from(document.getElementById("accounts").options).forEach((opt) => (opt.selected = accountIds.includes(Number(opt.value))));
@@ -247,7 +285,7 @@
       document.getElementById("description").value = it.description || "";
       document.getElementById("budget").value = it.budget || "";
       document.getElementById("owner").value = it.owner ? (typeof it.owner === 'object' ? it.owner.id : it.owner) : (it.owner_id || "");
-      const accountIdsEdit = (it.accounts || []).map((a) => (typeof a === 'object' ? a.id : a));
+      const accountIdsEdit = (it.accounts || []).map((a) => Number(typeof a === 'object' ? a.id : a));
       Array.from(document.getElementById("accounts").options).forEach((opt) => (opt.selected = accountIdsEdit.includes(Number(opt.value))));
       Array.from(
         document.querySelectorAll(
