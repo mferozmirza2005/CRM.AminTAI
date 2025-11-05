@@ -18,4 +18,5 @@ urlpatterns = [
     path('dashboard/deals/', views.deals_page, name='deals'),
     path('dashboard/campaigns/', views.campaigns_page, name='campaigns'),
     path('dashboard/tasks/', views.tasks_page, name='tasks'),
+    path('dashboard/facebook/', views.facebook_integration_page, name='facebook_integration'),
 ]

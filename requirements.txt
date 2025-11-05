@@ -8,3 +8,4 @@ djangorestframework-simplejwt
 django-environ
 gunicorn
 whitenoise
+requests

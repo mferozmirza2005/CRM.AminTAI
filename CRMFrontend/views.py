@@ -112,3 +112,11 @@ def tasks_page(request):
     Displays Tasks list page (data fetched via /api/tasks/).
     """
     return render(request, "tasks.html")
+
+@never_cache
+@login_required
+def facebook_integration_page(request):
+    """
+    Displays Facebook Integration management page.
+    """
+    return render(request, "facebook_integration.html")

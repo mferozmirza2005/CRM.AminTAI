@@ -1,0 +1,376 @@
+{% extends "base.html" %}
+{% load static %}
+
+{% block title %}Facebook Integration - CRM{% endblock %}
+
+{% block content %}
+<div class="page-header">
+  <h2 class="mb-0">
+    <i class="bi bi-facebook me-2 text-primary"></i>Facebook Integration
+  </h2>
+</div>
+
+<div class="row g-4">
+  <!-- Connection Status Card -->
+  <div class="col-12">
+    <div class="card">
+      <div class="card-header">
+        <h5 class="mb-0">
+          <i class="bi bi-link-45deg me-2"></i>Connection Status
+        </h5>
+      </div>
+      <div class="card-body">
+        <div id="connectionStatus" class="d-flex align-items-center justify-content-between">
+          <div class="d-flex align-items-center">
+            <div class="spinner-border spinner-border-sm text-primary me-3" role="status">
+              <span class="visually-hidden">Loading...</span>
+            </div>
+            <span>Checking connection status...</span>
+          </div>
+        </div>
+      </div>
+    </div>
+  </div>
+
+  <!-- Connect/Disconnect Card -->
+  <div class="col-12">
+    <div class="card">
+      <div class="card-header">
+        <h5 class="mb-0">
+          <i class="bi bi-gear me-2"></i>Manage Connection
+        </h5>
+      </div>
+      <div class="card-body">
+        <div id="connectSection" style="display: none;">
+          <p class="text-muted mb-3">
+            Connect your Facebook account to sync campaigns, leads, accounts, and contacts with your CRM.
+          </p>
+          <button class="btn btn-primary" id="connectBtn">
+            <i class="bi bi-facebook me-2"></i>Connect Facebook Account
+          </button>
+        </div>
+        <div id="connectedSection" style="display: none;">
+          <div class="alert alert-success mb-3">
+            <i class="bi bi-check-circle me-2"></i>
+            Facebook account connected successfully!
+          </div>
+          <div class="mb-3">
+            <strong>Facebook User ID:</strong> <span id="facebookUserId" class="text-muted">-</span><br>
+            <strong>Page ID:</strong> <span id="facebookPageId" class="text-muted">-</span><br>
+            <strong>Ad Account ID:</strong> <span id="facebookAdAccountId" class="text-muted">-</span><br>
+            <strong>Last Synced:</strong> <span id="lastSynced" class="text-muted">-</span>
+          </div>
+          <div class="d-flex gap-2">
+            <button class="btn btn-primary" id="syncBtn">
+              <i class="bi bi-arrow-repeat me-2"></i>Sync Now
+            </button>
+            <button class="btn btn-outline-danger" id="disconnectBtn">
+              <i class="bi bi-x-circle me-2"></i>Disconnect
+            </button>
+          </div>
+        </div>
+      </div>
+    </div>
+  </div>
+
+  <!-- Sync Status Card -->
+  <div class="col-12" id="syncStatusCard" style="display: none;">
+    <div class="card">
+      <div class="card-header">
+        <h5 class="mb-0">
+          <i class="bi bi-arrow-repeat me-2"></i>Sync Status
+        </h5>
+      </div>
+      <div class="card-body">
+        <div id="syncStatus" class="text-muted">Ready to sync...</div>
+      </div>
+    </div>
+  </div>
+
+  <!-- Available Data Card -->
+  <div class="col-12" id="dataCard" style="display: none;">
+    <div class="card">
+      <div class="card-header">
+        <h5 class="mb-0">
+          <i class="bi bi-database me-2"></i>Available Facebook Data
+        </h5>
+      </div>
+      <div class="card-body">
+        <div class="row g-3">
+          <div class="col-md-4">
+            <div class="stat-card">
+              <div class="d-flex align-items-center mb-2">
+                <i class="bi bi-building text-primary fs-4 me-2"></i>
+                <strong>Pages</strong>
+              </div>
+              <div id="pagesCount" class="stat-value">-</div>
+            </div>
+          </div>
+          <div class="col-md-4">
+            <div class="stat-card">
+              <div class="d-flex align-items-center mb-2">
+                <i class="bi bi-megaphone text-primary fs-4 me-2"></i>
+                <strong>Ad Accounts</strong>
+              </div>
+              <div id="adAccountsCount" class="stat-value">-</div>
+            </div>
+          </div>
+          <div class="col-md-4">
+            <div class="stat-card">
+              <div class="d-flex align-items-center mb-2">
+                <i class="bi bi-bullseye text-primary fs-4 me-2"></i>
+                <strong>Lead Forms</strong>
+              </div>
+              <div id="leadFormsCount" class="stat-value">-</div>
+            </div>
+          </div>
+        </div>
+      </div>
+    </div>
+  </div>
+</div>
+
+<!-- OAuth Callback Modal -->
+<div class="modal fade" id="oauthModal" tabindex="-1" aria-hidden="true">
+  <div class="modal-dialog modal-dialog-centered">
+    <div class="modal-content">
+      <div class="modal-header">
+        <h5 class="modal-title">Connecting to Facebook...</h5>
+      </div>
+      <div class="modal-body text-center">
+        <div class="spinner-border text-primary mb-3" role="status">
+          <span class="visually-hidden">Loading...</span>
+        </div>
+        <p>Please complete the authorization in the popup window.</p>
+      </div>
+    </div>
+  </div>
+</div>
+{% endblock %}
+
+{% block scripts %}
+<script>
+  (function () {
+    const base = "/api/facebook/integrations/";
+    const token = () => localStorage.getItem("access");
+    const headers = () => ({
+      "Authorization": "Bearer " + token(),
+      "Content-Type": "application/json"
+    });
+
+    let currentIntegration = null;
+
+    async function loadIntegration() {
+      try {
+        const res = await fetch(base, { headers: headers() });
+        if (res.ok) {
+          const data = await res.json();
+          if (data.length > 0) {
+            currentIntegration = data[0];
+            showConnectedState(currentIntegration);
+          } else {
+            showConnectState();
+          }
+        } else {
+          showConnectState();
+        }
+      } catch (err) {
+        console.error("Error loading integration:", err);
+        showConnectState();
+      }
+    }
+
+    function showConnectState() {
+      document.getElementById("connectionStatus").innerHTML = `
+        <div class="d-flex align-items-center">
+          <i class="bi bi-x-circle text-danger me-2 fs-5"></i>
+          <span class="text-danger">Not Connected</span>
+        </div>
+      `;
+      document.getElementById("connectSection").style.display = "block";
+      document.getElementById("connectedSection").style.display = "none";
+      document.getElementById("dataCard").style.display = "none";
+    }
+
+    function showConnectedState(integration) {
+      document.getElementById("connectionStatus").innerHTML = `
+        <div class="d-flex align-items-center">
+          <i class="bi bi-check-circle text-success me-2 fs-5"></i>
+          <span class="text-success">Connected</span>
+        </div>
+      `;
+      document.getElementById("connectSection").style.display = "none";
+      document.getElementById("connectedSection").style.display = "block";
+      document.getElementById("dataCard").style.display = "block";
+
+      document.getElementById("facebookUserId").textContent = integration.facebook_user_id || "-";
+      document.getElementById("facebookPageId").textContent = integration.facebook_page_id || "-";
+      document.getElementById("facebookAdAccountId").textContent = integration.facebook_ad_account_id || "-";
+      
+      if (integration.last_synced_at) {
+        const date = new Date(integration.last_synced_at);
+        document.getElementById("lastSynced").textContent = date.toLocaleString();
+      } else {
+        document.getElementById("lastSynced").textContent = "Never";
+      }
+
+      // Load available data counts
+      loadDataCounts(integration.id);
+    }
+
+    async function loadDataCounts(integrationId) {
+      try {
+        const [pagesRes, adAccountsRes] = await Promise.all([
+          fetch(base + integrationId + "/pages/", { headers: headers() }),
+          fetch(base + integrationId + "/ad_accounts/", { headers: headers() })
+        ]);
+
+        if (pagesRes.ok) {
+          const pagesData = await pagesRes.json();
+          document.getElementById("pagesCount").textContent = pagesData.pages?.length || 0;
+        }
+
+        if (adAccountsRes.ok) {
+          const adAccountsData = await adAccountsRes.json();
+          document.getElementById("adAccountsCount").textContent = adAccountsData.ad_accounts?.length || 0;
+        }
+      } catch (err) {
+        console.error("Error loading data counts:", err);
+      }
+    }
+
+    async function connectFacebook() {
+      try {
+        // Get OAuth URL
+        const res = await fetch(base + "oauth_url/", { headers: headers() });
+        if (!res.ok) throw new Error("Failed to get OAuth URL");
+        
+        const data = await res.json();
+        const oauthUrl = data.oauth_url;
+        
+        // Redirect to Facebook OAuth (full page redirect)
+        window.location.href = oauthUrl;
+
+      } catch (err) {
+        alert("Error connecting to Facebook: " + err.message);
+      }
+    }
+
+    // Check for OAuth callback parameters
+    function checkOAuthCallback() {
+      const urlParams = new URLSearchParams(window.location.search);
+      const success = urlParams.get('success');
+      const error = urlParams.get('error');
+      
+      if (success === 'connected') {
+        // Show success message
+        const alertDiv = document.createElement('div');
+        alertDiv.className = 'alert alert-success alert-dismissible fade show';
+        alertDiv.innerHTML = `
+          <i class="bi bi-check-circle me-2"></i>
+          Facebook account connected successfully!
+          <button type="button" class="btn-close" data-bs-dismiss="alert"></button>
+        `;
+        document.querySelector('.page-header').after(alertDiv);
+        
+        // Clean URL
+        window.history.replaceState({}, document.title, '/dashboard/facebook/');
+      } else if (error) {
+        const errorMsg = urlParams.get('error_description') || urlParams.get('message') || error;
+        const alertDiv = document.createElement('div');
+        alertDiv.className = 'alert alert-danger alert-dismissible fade show';
+        alertDiv.innerHTML = `
+          <i class="bi bi-exclamation-triangle me-2"></i>
+          Facebook connection failed: ${errorMsg}
+          <button type="button" class="btn-close" data-bs-dismiss="alert"></button>
+        `;
+        document.querySelector('.page-header').after(alertDiv);
+        
+        // Clean URL
+        window.history.replaceState({}, document.title, '/dashboard/facebook/');
+      }
+    }
+
+    async function syncData() {
+      if (!currentIntegration) return;
+
+      const syncStatusCard = document.getElementById("syncStatusCard");
+      const syncStatus = document.getElementById("syncStatus");
+      
+      syncStatusCard.style.display = "block";
+      syncStatus.innerHTML = '<div class="spinner-border spinner-border-sm me-2"></div>Syncing data...';
+      document.getElementById("syncBtn").disabled = true;
+
+      try {
+        const res = await fetch(base + currentIntegration.id + "/sync/", {
+          method: "POST",
+          headers: headers()
+        });
+
+        if (res.ok) {
+          const data = await res.json();
+          syncStatus.innerHTML = `
+            <div class="alert alert-success mb-0">
+              <i class="bi bi-check-circle me-2"></i>
+              Sync completed! 
+              <strong>${data.results.accounts_synced}</strong> accounts, 
+              <strong>${data.results.campaigns_synced}</strong> campaigns, 
+              <strong>${data.results.leads_synced}</strong> leads synced.
+            </div>
+          `;
+          loadIntegration(); // Reload to update last_synced_at
+        } else {
+          const error = await res.json();
+          syncStatus.innerHTML = `
+            <div class="alert alert-danger mb-0">
+              <i class="bi bi-exclamation-triangle me-2"></i>
+              Sync failed: ${error.error || "Unknown error"}
+            </div>
+          `;
+        }
+      } catch (err) {
+        syncStatus.innerHTML = `
+          <div class="alert alert-danger mb-0">
+            <i class="bi bi-exclamation-triangle me-2"></i>
+            Error: ${err.message}
+          </div>
+        `;
+      } finally {
+        document.getElementById("syncBtn").disabled = false;
+      }
+    }
+
+    async function disconnectFacebook() {
+      if (!currentIntegration || !confirm("Are you sure you want to disconnect Facebook integration?")) {
+        return;
+      }
+
+      try {
+        const res = await fetch(base + currentIntegration.id + "/disconnect/", {
+          method: "POST",
+          headers: headers()
+        });
+
+        if (res.ok) {
+          alert("Facebook integration disconnected successfully.");
+          loadIntegration();
+        } else {
+          alert("Failed to disconnect Facebook integration.");
+        }
+      } catch (err) {
+        alert("Error disconnecting: " + err.message);
+      }
+    }
+
+    // Event listeners
+    document.getElementById("connectBtn")?.addEventListener("click", connectFacebook);
+    document.getElementById("syncBtn")?.addEventListener("click", syncData);
+    document.getElementById("disconnectBtn")?.addEventListener("click", disconnectFacebook);
+
+    // Initial load
+    checkOAuthCallback();
+    loadIntegration();
+  })();
+</script>
+{% endblock %}
+

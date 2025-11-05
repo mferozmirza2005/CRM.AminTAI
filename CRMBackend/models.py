@@ -81,6 +81,33 @@ class CRMSettings(models.Model):
 
 
 # =========================
+# Facebook Integration
+# =========================
+class FacebookIntegration(models.Model):
+    """Stores Facebook OAuth connection for the organization"""
+    
+    user = models.ForeignKey(
+        User, on_delete=models.CASCADE, related_name="facebook_integrations"
+    )
+    access_token = models.TextField(help_text="Facebook access token")
+    token_expires_at = models.DateTimeField(null=True, blank=True)
+    facebook_user_id = models.CharField(max_length=100, blank=True)
+    facebook_page_id = models.CharField(max_length=100, blank=True, null=True)
+    facebook_ad_account_id = models.CharField(max_length=100, blank=True, null=True)
+    is_active = models.BooleanField(default=True)
+    last_synced_at = models.DateTimeField(null=True, blank=True)
+    created_at = models.DateTimeField(default=timezone.now)
+    updated_at = models.DateTimeField(auto_now=True)
+
+    class Meta:
+        verbose_name = "Facebook Integration"
+        verbose_name_plural = "Facebook Integrations"
+
+    def __str__(self):
+        return f"Facebook Integration - {self.user.email}"
+
+
+# =========================
 # Account & Contact
 # =========================
 class Account(models.Model):
@@ -91,6 +118,9 @@ class Account(models.Model):
     owner = models.ForeignKey(
         User, null=True, blank=True, on_delete=models.SET_NULL, related_name="accounts"
     )
+    # Facebook integration fields
+    facebook_page_id = models.CharField(max_length=100, blank=True, null=True, unique=True)
+    facebook_synced_at = models.DateTimeField(null=True, blank=True)
     created_at = models.DateTimeField(default=timezone.now)
 
     def __str__(self):
@@ -108,6 +138,9 @@ class Contact(models.Model):
     email = models.EmailField(blank=True, null=True)
     phone = models.CharField(max_length=50, blank=True, null=True)
     position = models.CharField(max_length=100, blank=True, null=True)
+    # Facebook integration fields
+    facebook_user_id = models.CharField(max_length=100, blank=True, null=True)
+    facebook_synced_at = models.DateTimeField(null=True, blank=True)
     created_at = models.DateTimeField(default=timezone.now)
 
     def __str__(self):
@@ -129,6 +162,10 @@ class Campaign(models.Model):
     start_date = models.DateField(null=True, blank=True)
     end_date = models.DateField(null=True, blank=True)
     budget = models.DecimalField(max_digits=12, decimal_places=2, default=0)
+    # Facebook integration fields
+    facebook_campaign_id = models.CharField(max_length=100, blank=True, null=True, unique=True)
+    facebook_ad_set_id = models.CharField(max_length=100, blank=True, null=True)
+    facebook_synced_at = models.DateTimeField(null=True, blank=True)
     created_at = models.DateTimeField(default=timezone.now)
 
     def __str__(self):
@@ -163,6 +200,10 @@ class Lead(models.Model):
     contact = models.ForeignKey(
         Contact, null=True, blank=True, on_delete=models.SET_NULL, related_name="leads"
     )
+    # Facebook integration fields
+    facebook_lead_id = models.CharField(max_length=100, blank=True, null=True, unique=True)
+    facebook_lead_form_id = models.CharField(max_length=100, blank=True, null=True)
+    facebook_synced_at = models.DateTimeField(null=True, blank=True)
     created_at = models.DateTimeField(default=timezone.now)
 
     def __str__(self):
@@ -200,6 +241,9 @@ class Deal(models.Model):
         Campaign, null=True, blank=True, on_delete=models.SET_NULL, related_name="deals"
     )
     close_date = models.DateField(null=True, blank=True)
+    # Facebook integration fields
+    facebook_event_id = models.CharField(max_length=100, blank=True, null=True)
+    facebook_synced_at = models.DateTimeField(null=True, blank=True)
     created_at = models.DateTimeField(default=timezone.now)
 
     def __str__(self):

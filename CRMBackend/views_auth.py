@@ -129,39 +129,39 @@ class DashboardView(APIView):
         if role == "superuser":
             data["recent_campaigns"] = list(
                 Campaign.objects.order_by("-created_at")[:5].values(
-                    "name", "region", "created_at"
+                    "id", "name", "budget", "created_at"
                 )
             )
             data["recent_leads"] = list(
                 Lead.objects.order_by("-created_at")[:5].values(
-                    "name", "status", "created_at"
+                    "id", "title", "status", "created_at"
                 )
             )
             data["recent_deals"] = list(
                 Deal.objects.order_by("-created_at")[:5].values(
-                    "title", "value", "stage", "created_at"
+                    "id", "title", "amount", "stage", "created_at"
                 )
             )
         elif role == "admin":
             data["recent_accounts"] = list(
                 Account.objects.order_by("-created_at")[:5].values(
-                    "name", "region", "created_at"
+                    "id", "name", "region", "created_at"
                 )
             )
             data["recent_leads"] = list(
                 Lead.objects.order_by("-created_at")[:5].values(
-                    "name", "status", "created_at"
+                    "id", "title", "status", "created_at"
                 )
             )
         elif role == "employee":
             data["assigned_leads"] = list(
-                Lead.objects.filter(assigned_to=user).values(
-                    "name", "status", "created_at"
+                Lead.objects.filter(owner=user).values(
+                    "id", "title", "status", "created_at"
                 )
             )
             data["assigned_tasks"] = list(
                 Task.objects.filter(assigned_to=user).values(
-                    "title", "due_date", "status"
+                    "id", "title", "due_date", "completed", "created_at"
                 )
             )
 

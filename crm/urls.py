@@ -17,7 +17,8 @@ Including another URLconf
 from django.contrib import admin
 from django.urls import path, include
 from rest_framework import routers
-from CRMBackend import views, views_auth
+from CRMBackend import views, views_auth, facebook_views
+from CRMBackend.facebook_oauth_callback import FacebookOAuthCallbackView
 from CRMFrontend import urls as CRMFrontendUrls
 from rest_framework_simplejwt.views import TokenRefreshView
 
@@ -29,6 +30,7 @@ router.register(r'leads', views.LeadViewSet, basename='lead')
 router.register(r'deals', views.DealViewSet, basename='deal')
 router.register(r'campaigns', views.CampaignViewSet, basename='campaign')
 router.register(r'tasks', views.TaskViewSet, basename='task')
+router.register(r'facebook/integrations', facebook_views.FacebookIntegrationViewSet, basename='facebook-integration')
 
 urlpatterns = [
     path('admin/', admin.site.urls),
@@ -45,4 +47,7 @@ urlpatterns = [
     path('api/auth/', include('rest_framework.urls', namespace='rest_framework')),
 
     path('api/auth/login/refresh/', TokenRefreshView.as_view(), name='token_refresh'),
+    
+    # Facebook OAuth callback (handles redirect from Facebook)
+    path('api/facebook/callback/', FacebookOAuthCallbackView.as_view(), name='facebook-callback'),
 ]
